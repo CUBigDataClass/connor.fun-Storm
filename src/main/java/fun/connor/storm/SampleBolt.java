@@ -21,6 +21,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.Map;
 
+import org.apache.storm.tuple.Fields;
+import org.apache.storm.tuple.Values;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +35,6 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Tuple;
 
-import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.comprehend.AmazonComprehend;
@@ -75,15 +79,30 @@ public class SampleBolt extends BaseBasicBolt {
                 .withLanguageCode("en");
         DetectSentimentResult detectSentimentResult = comprehendClient.detectSentiment(detectSentimentRequest);
 
+        float sentiment = detectSentimentResult.getSentimentScore().getPositive() - detectSentimentResult.getSentimentScore().getNegative();
 
+        JSONParser parser = new JSONParser();
+        Object obj = null;
+        try {
+            obj = parser.parse(data);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        JSONObject jsonObject = (JSONObject) obj;
+
+        String region = (String) jsonObject.get("region");
+        String tweetid = (String) jsonObject.get("ID");
+
+        collector.emit(new Values(region, sentiment, tweetid));
 
         LOG.info("SampleBolt got record: partitionKey=" + partitionKey + ", " + " sequenceNumber=" + sequenceNumber
-                + ", data=" + data + ", sentiment=" + detectSentimentResult);
+                + ", data=" + data + ", sentiment=" + sentiment);
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        
+        declarer.declare(new Fields("regionID", "sentiment", "tweetid"));
     }
 
 }
