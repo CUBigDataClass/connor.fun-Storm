@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.Properties;
 
 import org.apache.storm.generated.AuthorizationException;
+import org.apache.storm.topology.base.BaseWindowedBolt;
+import org.apache.storm.tuple.Fields;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,10 +61,15 @@ public class ProcessTopology {
         // Using number of shards as the parallelism hint for the spout.
         builder.setSpout("kinesis_spout", spout, 1);
         builder.setBolt("print_bolt", new SampleBolt(), 2).shuffleGrouping("kinesis_spout");
+        builder.setBolt("average_bolt", new AverageBolt().withWindow(
+                    BaseWindowedBolt.Duration.minutes(10), BaseWindowedBolt.Duration.minutes(2)), 10).fieldsGrouping("print_bolt", new Fields("regionID"));
+        builder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt");
 
         Config topoConf = new Config();
         topoConf.setFallBackOnJavaSerialization(true);
         topoConf.setDebug(true);
+        topoConf.setNumEventLoggers(1);
+        topoConf.setMessageTimeoutSecs(1200000);
         topoConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
 
         if (mode.equals("LocalMode")) {

@@ -93,8 +93,9 @@ public class SampleBolt extends BaseBasicBolt {
 
         String region = (String) jsonObject.get("region");
         String tweetid = (String) jsonObject.get("ID");
+        String regionJSON = (String) jsonObject.get("regionData");
 
-        collector.emit(new Values(region, sentiment, tweetid));
+        collector.emit(new Values(region, sentiment, tweetid, regionJSON));
 
         LOG.info("SampleBolt got record: partitionKey=" + partitionKey + ", " + " sequenceNumber=" + sequenceNumber
                 + ", data=" + data + ", sentiment=" + sentiment);
@@ -102,7 +103,7 @@ public class SampleBolt extends BaseBasicBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("regionID", "sentiment", "tweetid"));
+        declarer.declare(new Fields("regionID", "sentiment", "tweetID", "regionJSON"));
     }
 
 }
