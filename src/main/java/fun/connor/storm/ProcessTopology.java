@@ -60,9 +60,9 @@ public class ProcessTopology {
 
         // Using number of shards as the parallelism hint for the spout.
         builder.setSpout("kinesis_spout", spout, 1);
-        builder.setBolt("print_bolt", new SampleBolt(), 4).shuffleGrouping("kinesis_spout");
+        builder.setBolt("print_bolt", new SampleBolt(), 2).shuffleGrouping("kinesis_spout");
         builder.setBolt("average_bolt", new AverageBolt().withWindow(
-                    BaseWindowedBolt.Duration.minutes(10), BaseWindowedBolt.Duration.minutes(2)), 30).fieldsGrouping("print_bolt", new Fields("regionID")).setMemoryLoad(768.0);;
+                    BaseWindowedBolt.Duration.minutes(10), BaseWindowedBolt.Duration.minutes(2)), 4).fieldsGrouping("print_bolt", new Fields("regionID")).setMemoryLoad(768.0);;
         builder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
 
         Config topoConf = new Config();
