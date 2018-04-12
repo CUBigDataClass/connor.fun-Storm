@@ -22,10 +22,12 @@ import java.util.Map;
 
 public class WeatherBolt extends BaseBasicBolt {
     private static final Logger LOG = LoggerFactory.getLogger(WeatherBolt.class);
+    private KinesisProducer kinesisProducer;
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
-
+        KinesisProducer kinesis = new KinesisProducer();
+        this.kinesisProducer = kinesis;
     }
 
     @Override
@@ -64,11 +66,10 @@ public class WeatherBolt extends BaseBasicBolt {
 
                 Values output = new Values(regionID, avgSentiment, tweetID, regionJSON, weatherJSON);
 
-                KinesisProducer kinesis = new KinesisProducer();
                 // Put some records
                 ByteBuffer data = ByteBuffer.wrap(output.toString().getBytes("UTF-8"));
                 // doesn't block! tnx kpl, hope this works
-                kinesis.addUserRecord("connorfun-frontend", "0", data);
+                this.kinesisProducer.addUserRecord("connorfun-frontend", "0", data);
 
                 // Output fields
                 collector.emit(output);
