@@ -14,10 +14,10 @@ mvn install:install-file -Dfile=lib/kinesis-storm-spout-1.1.2-SNAPSHOT.jar -Dgro
 For actually running a topology on a remote cluster:
 ```
 $ mvn package
-$ /path/to/storm/bin/storm jar target/storm-1.0-jar-with-dependencies.jar fun.connor.storm.ProcessTopology ./sample.properties RemoteMode
+$ /path/to/storm/bin/storm jar target/storm-1.0.jar fun.connor.storm.ProcessTopology ./sample.properties RemoteMode
 ```
 
 Running locally is also possible:
 ```
-$ /path/to/storm/bin/storm jar target/storm-1.0-jar-with-dependencies.jar fun.connor.storm.ProcessTopology ./sample.properties LocalMode
+$ /path/to/storm/bin/storm jar target/storm-1.0.jar fun.connor.storm.ProcessTopology ./sample.properties LocalMode
 ```
