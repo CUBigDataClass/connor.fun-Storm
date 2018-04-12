@@ -69,7 +69,8 @@ public class ProcessTopology {
         topoConf.setFallBackOnJavaSerialization(true);
         topoConf.setDebug(true);
         topoConf.setNumEventLoggers(1);
-        topoConf.setMessageTimeoutSecs(1200000);
+        topoConf.setNumWorkers(5);
+        topoConf.setMessageTimeoutSecs(1200000); // 20 mins
         topoConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
 
         if (mode.equals("LocalMode")) {
