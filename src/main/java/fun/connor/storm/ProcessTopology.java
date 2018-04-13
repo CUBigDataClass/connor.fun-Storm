@@ -69,7 +69,7 @@ public class ProcessTopology {
         topoConf.setFallBackOnJavaSerialization(true);
         topoConf.setDebug(true);
         topoConf.setNumEventLoggers(5);
-        topoConf.setNumWorkers(5);
+        topoConf.setNumWorkers(10);
         topoConf.setMessageTimeoutSecs(1200000); // 20 mins
         topoConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
 
@@ -77,7 +77,6 @@ public class ProcessTopology {
             LOG.info("Starting sample storm topology in LocalMode ...");
             new LocalCluster().submitTopology("test_spout", topoConf, builder.createTopology());
         } else if (mode.equals("RemoteMode")) {
-            topoConf.setNumWorkers(1);
             topoConf.setMaxSpoutPending(5000);
             LOG.info("Submitting sample topology " + topologyName + " to remote cluster.");
             try {
