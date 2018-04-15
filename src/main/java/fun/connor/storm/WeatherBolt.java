@@ -1,6 +1,8 @@
 package fun.connor.storm;
 
 import com.amazonaws.services.kinesis.producer.KinesisProducer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -19,15 +21,29 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Properties;
 
 public class WeatherBolt extends BaseBasicBolt {
     private static final Logger LOG = LoggerFactory.getLogger(WeatherBolt.class);
     private KinesisProducer kinesisProducer;
+    private KafkaProducer<String, String> kafkaProducer;
+
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
+        Properties props = new Properties();
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("acks", "all");
+        props.put("retries", 0);
+        props.put("batch.size", 16384);
+        props.put("linger.ms", 1);
+        props.put("buffer.memory", 33554432);
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
         KinesisProducer kinesis = new KinesisProducer();
         this.kinesisProducer = kinesis;
+        this.kafkaProducer = new KafkaProducer<>(props);
     }
 
     @Override
@@ -70,6 +86,8 @@ public class WeatherBolt extends BaseBasicBolt {
                 ByteBuffer data = ByteBuffer.wrap(output.toString().getBytes("UTF-8"));
                 // doesn't block! tnx kpl, hope this works
                 this.kinesisProducer.addUserRecord("connorfun-frontend", "0", data);
+
+                this.kafkaProducer.send(new ProducerRecord<String, String>("test", regionID, weatherJSON));
 
                 // Output fields
                 collector.emit(output);
