@@ -25,7 +25,6 @@ import java.util.Properties;
 
 public class WeatherBolt extends BaseBasicBolt {
     private static final Logger LOG = LoggerFactory.getLogger(WeatherBolt.class);
-    private KinesisProducer kinesisProducer;
     private KafkaProducer<String, String> kafkaProducer;
 
 
@@ -41,8 +40,8 @@ public class WeatherBolt extends BaseBasicBolt {
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
-        KinesisProducer kinesis = new KinesisProducer();
-        this.kinesisProducer = kinesis;
+        //KinesisProducer kinesis = new KinesisProducer();
+        //this.kinesisProducer = kinesis;
         this.kafkaProducer = new KafkaProducer<>(props);
     }
 
@@ -85,9 +84,9 @@ public class WeatherBolt extends BaseBasicBolt {
                 // Put some records
                 ByteBuffer data = ByteBuffer.wrap(output.toString().getBytes("UTF-8"));
                 // doesn't block! tnx kpl, hope this works
-                this.kinesisProducer.addUserRecord("connorfun-frontend", "0", data);
+                //this.kinesisProducer.addUserRecord("connorfun-frontend", "0", data);
 
-                this.kafkaProducer.send(new ProducerRecord<String, String>("test", regionID, weatherJSON));
+                this.kafkaProducer.send(new ProducerRecord<String, String>("test", regionID, this.formatOutput(regionID, avgSentiment, tweetID, regionJSON, weatherJSON)));
 
                 // Output fields
                 collector.emit(output);
@@ -97,7 +96,18 @@ public class WeatherBolt extends BaseBasicBolt {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
 
+    private String formatOutput(String regionID, Float avgSentiment, String tweetID, String regionJSON, String weatherJSON) {
+
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("sentiment", avgSentiment);
+        jsonObject.put("ID", regionID);
+        jsonObject.put("tid", tweetID);
+        jsonObject.put("region", regionJSON);
+        jsonObject.put("weather", weatherJSON);
+
+        return jsonObject.toJSONString();
     }
 
     private static String readAll(Reader rd) throws IOException {
