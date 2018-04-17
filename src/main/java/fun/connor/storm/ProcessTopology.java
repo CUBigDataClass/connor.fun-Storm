@@ -60,23 +60,23 @@ public class ProcessTopology {
 
         // Using number of shards as the parallelism hint for the spout.
         builder.setSpout("kinesis_spout", spout, 1);
-        builder.setBolt("print_bolt", new SampleBolt(), 4).shuffleGrouping("kinesis_spout");
+        builder.setBolt("print_bolt", new SampleBolt(), 2).setNumTasks(2).shuffleGrouping("kinesis_spout");
         builder.setBolt("average_bolt", new AverageBolt().withWindow(
-                    BaseWindowedBolt.Duration.minutes(10), BaseWindowedBolt.Duration.minutes(2)), 30).fieldsGrouping("print_bolt", new Fields("regionID")).setMemoryLoad(768.0);;
+                    BaseWindowedBolt.Duration.minutes(10), BaseWindowedBolt.Duration.minutes(2)), 10).setNumTasks(10).fieldsGrouping("print_bolt", new Fields("regionID")).setMemoryLoad(768.0);;
         builder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
 
         Config topoConf = new Config();
         topoConf.setFallBackOnJavaSerialization(true);
         topoConf.setDebug(true);
-        topoConf.setNumEventLoggers(1);
-        topoConf.setMessageTimeoutSecs(1200000);
+        topoConf.setNumEventLoggers(5);
+        topoConf.setNumWorkers(10);
+        topoConf.setMessageTimeoutSecs(1200000); // 20 mins
         topoConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
 
         if (mode.equals("LocalMode")) {
             LOG.info("Starting sample storm topology in LocalMode ...");
             new LocalCluster().submitTopology("test_spout", topoConf, builder.createTopology());
         } else if (mode.equals("RemoteMode")) {
-            topoConf.setNumWorkers(1);
             topoConf.setMaxSpoutPending(5000);
             LOG.info("Submitting sample topology " + topologyName + " to remote cluster.");
             try {
