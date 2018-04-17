@@ -99,13 +99,26 @@ public class WeatherBolt extends BaseBasicBolt {
     }
 
     private String formatOutput(String regionID, Float avgSentiment, String tweetID, String regionJSON, String weatherJSON) {
+        // Parse regionJSON and weatherJSON so they become sub-objects
+        Object regionRaw = null;
+        Object weatherRaw = null;
+        JSONParser parser = new JSONParser();
+        try {
+            regionRaw = parser.parse(regionJSON);
+            weatherRaw = parser.parse(weatherJSON);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        JSONObject region = (JSONObject) regionRaw;
+        JSONObject weather = (JSONObject) weatherRaw;
 
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("sentiment", avgSentiment);
         jsonObject.put("ID", regionID);
         jsonObject.put("tid", tweetID);
-        jsonObject.put("region", regionJSON);
-        jsonObject.put("weather", weatherJSON);
+        jsonObject.put("region", region);
+        jsonObject.put("weather", weather);
 
         return jsonObject.toJSONString();
     }
