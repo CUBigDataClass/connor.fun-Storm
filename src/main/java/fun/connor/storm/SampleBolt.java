@@ -91,9 +91,19 @@ public class SampleBolt extends BaseBasicBolt {
 
         JSONObject jsonObject = (JSONObject) obj;
 
-        String region = (String) jsonObject.get("region");
         String tweetid = (String) jsonObject.get("ID");
         String regionJSON = (String) jsonObject.get("regionData");
+
+        Object regionRaw = null;
+        try {
+            regionRaw = parser.parse(regionJSON);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        JSONObject regionObj = (JSONObject) regionRaw;
+
+        String region = (String) regionObj.get("ID");
 
         collector.emit(new Values(region, sentiment, tweetid, regionJSON));
 
