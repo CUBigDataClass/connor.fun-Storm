@@ -1,0 +1,44 @@
+To install and run zookeeper:
+>wget http://apache.mirrors.ionfish.org/zookeeper/current/zookeeper-3.4.10.tar.gz
+>tar xzf zookeeper-3.4.10.tar.gz
+
+Create a new config file under zookeeper-3.4.10/conf (I named mine zoo.cfg)
+Here, you can edit the defaults - the one you need to change is dataDir, it can't be in tmp
+(I set mine to empty folder /var/zookeeper)
+
+To start zookeeper:
+> sudo bin/zkServer.sh start
+
+To connect (via Java CLI):
+>bin/zkCli.sh -server 120.0.0.1:2181
+
+Note: Your port might be different, and if you're connecting to a different server the ip won't be localhost
+
+To add to the cluster in replicated mode:
+server.1 = zoo1:2888:3888
+
+
+It's common for zookeeper nodes to die, so you'll want to supervise them. Here we'll use daemontools.
+http://cr.yp.to/daemontools.html
+
+
+For installation of actual storm:
+>wget http://mirror.jax.hugeserver.com/apache/storm/apache-storm-1.2.1/apache-storm-1.2.1.tar.gz
+>tar -xzf v1.2.1.tar.gz
+To install java:
+>sudo yum install java-1.7.0-openjdk.x86_64
+
+Console: https://[nimbus IP]:3000
+
+To be able to access the internal ip, use the a security group enabling all ICMP
+(or ICMP from just that security group if you want to be safe)
+
+To run nimbus:
+sudo nohup /home/storm/apache-storm-0.9.5/bin/storm nimbus > /dev/null 2>&1 &
+
+
+
+links:
+http://storm.apache.org/releases/current/Setting-up-a-Storm-cluster.html
+https://ankscircle.wordpress.com/2015/06/03/running-a-multi-node-apache-storm-cluster-on-ubuntuaws/
+https://knowm.org/how-to-install-a-distributed-apache-storm-cluster/ ---> I skipped a bunch of steps here, specifically with all the different users and the upstart scripts

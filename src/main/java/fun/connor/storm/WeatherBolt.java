@@ -1,6 +1,8 @@
 package fun.connor.storm;
 
 import com.amazonaws.services.kinesis.producer.KinesisProducer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -19,15 +21,28 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Properties;
 
 public class WeatherBolt extends BaseBasicBolt {
     private static final Logger LOG = LoggerFactory.getLogger(WeatherBolt.class);
-    private KinesisProducer kinesisProducer;
+    private KafkaProducer<String, String> kafkaProducer;
+
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
-        KinesisProducer kinesis = new KinesisProducer();
-        this.kinesisProducer = kinesis;
+        Properties props = new Properties();
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("acks", "all");
+        props.put("retries", 0);
+        props.put("batch.size", 16384);
+        props.put("linger.ms", 1);
+        props.put("buffer.memory", 33554432);
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+        //KinesisProducer kinesis = new KinesisProducer();
+        //this.kinesisProducer = kinesis;
+        this.kafkaProducer = new KafkaProducer<>(props);
     }
 
     @Override
@@ -69,7 +84,9 @@ public class WeatherBolt extends BaseBasicBolt {
                 // Put some records
                 ByteBuffer data = ByteBuffer.wrap(output.toString().getBytes("UTF-8"));
                 // doesn't block! tnx kpl, hope this works
-                this.kinesisProducer.addUserRecord("connorfun-frontend", "0", data);
+                //this.kinesisProducer.addUserRecord("connorfun-frontend", "0", data);
+
+                this.kafkaProducer.send(new ProducerRecord<String, String>("test", regionID, this.formatOutput(regionID, avgSentiment, tweetID, regionJSON, weatherJSON)));
 
                 // Output fields
                 collector.emit(output);
@@ -79,7 +96,18 @@ public class WeatherBolt extends BaseBasicBolt {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
 
+    private String formatOutput(String regionID, Float avgSentiment, String tweetID, String regionJSON, String weatherJSON) {
+
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("sentiment", avgSentiment);
+        jsonObject.put("ID", regionID);
+        jsonObject.put("tid", tweetID);
+        jsonObject.put("region", regionJSON);
+        jsonObject.put("weather", weatherJSON);
+
+        return jsonObject.toJSONString();
     }
 
     private static String readAll(Reader rd) throws IOException {
