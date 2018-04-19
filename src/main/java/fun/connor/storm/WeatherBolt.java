@@ -112,7 +112,6 @@ public class WeatherBolt extends BaseBasicBolt {
 
         JSONObject region = (JSONObject) regionRaw;
         JSONObject weather = (JSONObject) weatherRaw;
-
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("sentiment", avgSentiment);
         jsonObject.put("ID", regionID);
