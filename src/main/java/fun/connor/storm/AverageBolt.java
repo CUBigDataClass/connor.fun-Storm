@@ -36,7 +36,8 @@ public class AverageBolt extends BaseWindowedBolt{
 	    String regionID = (String) tuplesInWindow.get(1).getValue(0);
             String avgTweetID = (String) tuplesInWindow.get(1).getValue(2);
             Object regionJSON = tuplesInWindow.get(1).getValue(3);
-    
+    	    float avgTweetSent = (float)tuplesInWindow.get(1).getValue(1);
+
             for (Tuple tuple: tuplesInWindow){
 	    
                 // Get fields and pull out sentiment
@@ -50,13 +51,14 @@ public class AverageBolt extends BaseWindowedBolt{
 		    tempAverage = sumSentiment/counter;
 		    if(((float)tuple.getValue(1)-tempAverage)<0.001){
 			avgTweetID =(String) tuple.getValue(2);
+			avgTweetSent = (float) tuple.getValue(1);
 		    }
 		    counter++;
 		}
             }
 	    
 	    float avgSentiment = sumSentiment / tuplesInWindow.size();
-
+	    LOG.info("AverageBolt got indicative tweet "+avgTweetID+ " with sentiment "+avgTweetSent);
             collector.emit(new Values(regionID, avgSentiment, avgTweetID, regionJSON));
             // Output the data: region average, region ID, and typical tweet for the window.
             LOG.info("AverageBolt got region: regionID=" + tuplesInWindow.get(1).getValue(0) + " with average sentiment of " + avgSentiment);
