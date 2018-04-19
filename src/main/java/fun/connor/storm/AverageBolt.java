@@ -49,7 +49,7 @@ public class AverageBolt extends BaseWindowedBolt{
       		    sumSentiment += (float) tuple.getValue(1);
 		    tempAverage = sumSentiment/counter;
 		    if(((float)tuple.getValue(1)-tempAverage)<0.001){
-			avgTweetID = tuple.getValue(2);
+			avgTweetID =(String) tuple.getValue(2);
 		    }
 		    counter++;
 		}
