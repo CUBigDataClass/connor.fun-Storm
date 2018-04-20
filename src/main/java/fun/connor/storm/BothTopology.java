@@ -5,12 +5,15 @@ import java.util.UUID;
 
 import org.apache.storm.generated.AuthorizationException;
 import org.apache.storm.kafka.BrokerHosts;
+import org.apache.storm.kafka.KafkaConfig;
 import org.apache.storm.kafka.KafkaSpout;
 import org.apache.storm.kafka.SpoutConfig;
 import org.apache.storm.kafka.ZkHosts;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import kafka.api.OffsetRequest;
 
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
@@ -28,9 +31,10 @@ public class BothTopology {
 
         // kafka -> sort_bolt -- topic is 'raw-tweets'
         String topicName = "raw-tweets";
-        BrokerHosts hosts = new ZkHosts("localhost", "localhost:2181"); // Assumes Kafka broker uses same zk
+        BrokerHosts hosts = new ZkHosts("localhost:2181", "/brokers"); // Assumes Kafka broker uses same zk
         // Takes in: BrokerHosts object, topic, zkRoot, zkSpoutID (here random)
-        SpoutConfig spoutConfig = new SpoutConfig(hosts, topicName, "/"+topicName, "raw-consumer");
+        SpoutConfig spoutConfig = new SpoutConfig(hosts, topicName, "/" + topicName, UUID.randomUUID().toString());
+        spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
         spoutConfig.bufferSizeBytes = 1024 * 1024 * 4;
         spoutConfig.fetchSizeBytes = 1024 * 1024 * 4;
 
