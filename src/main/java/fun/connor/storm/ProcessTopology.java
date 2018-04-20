@@ -26,126 +26,39 @@ import com.amazonaws.services.kinesis.stormspout.KinesisSpoutConfig;
 
 public class ProcessTopology {
     private static final Logger LOG = LoggerFactory.getLogger(ProcessTopology.class);
-    private static String topologyName = "SampleTopology";
-    private static String streamName;
-    private static InitialPositionInStream initialPositionInStream = InitialPositionInStream.LATEST;
-    private static int recordRetryLimit = 3;
-    private static Regions region = Regions.US_EAST_1;
-    private static String zookeeperEndpoint;
-    private static String zookeeperPrefix;
 
-    public static void main(String[] args) throws IllegalArgumentException, KeeperException, InterruptedException, AlreadyAliveException, InvalidTopologyException, IOException {
-        String propertiesFile = null;
-        String mode = null;
+    public static void main(String[] args) throws IllegalArgumentException, KeeperException, InterruptedException,
+            AlreadyAliveException, InvalidTopologyException, IOException {
+        TopologyBuilder rawBuilder = new TopologyBuilder();
 
-        if (args.length != 2) {
-            printUsageAndExit();
-        } else {
-            propertiesFile = args[0];
-            mode = args[1];
-        }
+        // kafka -> sort_bolt -- ????
+        rawBuilder.setBolt("sorting_bolt", new SortBolt(), 2).setNumTasks(2).shuffleGrouping("raw_spout");
+        // sort_bolt -> kafka (USE REGION FOR TOPIC) I will do this is sorting_bolt -- Sam
 
-        configure(propertiesFile);
-
-        final KinesisSpoutConfig config =
-                new KinesisSpoutConfig(streamName, zookeeperEndpoint).withZookeeperPrefix(zookeeperPrefix)
-                        .withKinesisRecordScheme(new SampleKinesisRecordScheme())
-                        .withInitialPositionInStream(initialPositionInStream)
-                        .withRecordRetryLimit(recordRetryLimit)
-                        .withRegion(region);
-
-        final KinesisSpout spout = new KinesisSpout(config, new CustomCredentialsProviderChain(), new ClientConfiguration());
-        TopologyBuilder builder = new TopologyBuilder();
-        LOG.info("Using Kinesis stream: " + config.getStreamName());
-
-        // Using number of shards as the parallelism hint for the spout.
-        builder.setSpout("kinesis_spout", spout, 1);
-        builder.setBolt("print_bolt", new SampleBolt(), 2).setNumTasks(2).shuffleGrouping("kinesis_spout");
-        builder.setBolt("average_bolt", new AverageBolt().withWindow(
-                    BaseWindowedBolt.Duration.minutes(10), BaseWindowedBolt.Duration.minutes(2)), 10).setNumTasks(10).fieldsGrouping("print_bolt", new Fields("regionID")).setMemoryLoad(768.0);;
-        builder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
+        // TOPOLOGY SPLIT
+        TopologyBuilder aveBuilder = new TopologyBuilder();
+        // kafka regions -> averagebolt w/ direct grouping (will need #num region spouts)
+        aveBuilder.setBolt("average_bolt",
+                new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
+                        BaseWindowedBolt.Duration.minutes(2)),
+                10).setNumTasks(10).fieldsGrouping("print_bolt", new Fields("regionID")).setMemoryLoad(768.0);
+        aveBuilder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
+        // Annnd weather bolt already outputs to kafka! Yay!
 
         Config topoConf = new Config();
         topoConf.setFallBackOnJavaSerialization(true);
-        topoConf.setDebug(true);
-        topoConf.setNumEventLoggers(5);
-        topoConf.setNumWorkers(10);
+        topoConf.setDebug(true);                 
+        topoConf.setNumEventLoggers(5);          // Arbritrary
+        topoConf.setNumWorkers(10);              // ^
         topoConf.setMessageTimeoutSecs(1200000); // 20 mins
         topoConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
 
-        if (mode.equals("LocalMode")) {
-            LOG.info("Starting sample storm topology in LocalMode ...");
-            new LocalCluster().submitTopology("test_spout", topoConf, builder.createTopology());
-        } else if (mode.equals("RemoteMode")) {
-            topoConf.setMaxSpoutPending(5000);
-            LOG.info("Submitting sample topology " + topologyName + " to remote cluster.");
-            try {
-                StormSubmitter.submitTopology(topologyName, topoConf, builder.createTopology());
-            } catch (AuthorizationException e) {
-                e.printStackTrace();
-            }
-        } else {
-            printUsageAndExit();
-        }
-
-    }
-
-    private static void configure(String propertiesFile) throws IOException {
-        FileInputStream inputStream = new FileInputStream(propertiesFile);
-        Properties properties = new Properties();
+        topoConf.setMaxSpoutPending(5000);
         try {
-            properties.load(inputStream);
-        } finally {
-            inputStream.close();
+            StormSubmitter.submitTopology("sorting-topology", topoConf, builder.createTopology());
+        } catch (AuthorizationException e) {
+            e.printStackTrace();
         }
-
-        String topologyNameOverride = properties.getProperty(ConfigKeys.TOPOLOGY_NAME_KEY);
-        if (topologyNameOverride != null) {
-            topologyName = topologyNameOverride;
-        }
-        LOG.info("Using topology name " + topologyName);
-
-        String streamNameOverride = properties.getProperty(ConfigKeys.STREAM_NAME_KEY);
-        if (streamNameOverride != null) {
-            streamName = streamNameOverride;
-        }
-        LOG.info("Using stream name " + streamName);
-
-        String initialPositionOverride = properties.getProperty(ConfigKeys.INITIAL_POSITION_IN_STREAM_KEY);
-        if (initialPositionOverride != null) {
-            initialPositionInStream = InitialPositionInStream.valueOf(initialPositionOverride);
-        }
-        LOG.info("Using initial position " + initialPositionInStream.toString() + " (if a checkpoint is not found).");
-
-        String recordRetryLimitOverride = properties.getProperty(ConfigKeys.RECORD_RETRY_LIMIT);
-        if (recordRetryLimitOverride != null) {
-            recordRetryLimit = Integer.parseInt(recordRetryLimitOverride.trim());
-        }
-        LOG.info("Using recordRetryLimit " + recordRetryLimit);
-
-        String regionOverride = properties.getProperty(ConfigKeys.REGION_KEY);
-        if (regionOverride != null) {
-            region = Regions.fromName(regionOverride);
-        }
-        LOG.info("Using region " + region.getName());
-
-        String zookeeperEndpointOverride = properties.getProperty(ConfigKeys.ZOOKEEPER_ENDPOINT_KEY);
-        if (zookeeperEndpointOverride != null) {
-            zookeeperEndpoint = zookeeperEndpointOverride;
-        }
-        LOG.info("Using zookeeper endpoint " + zookeeperEndpoint);
-
-        String zookeeperPrefixOverride = properties.getProperty(ConfigKeys.ZOOKEEPER_PREFIX_KEY);
-        if (zookeeperPrefixOverride != null) {
-            zookeeperPrefix = zookeeperPrefixOverride;
-        }
-        LOG.info("Using zookeeper prefix " + zookeeperPrefix);
-
-    }
-
-    private static void printUsageAndExit() {
-        System.out.println("Usage: " + ProcessTopology.class.getName() + " <propertiesFile> <LocalMode or RemoteMode>");
-        System.exit(-1);
     }
 
 }

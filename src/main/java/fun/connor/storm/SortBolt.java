@@ -42,9 +42,9 @@ import com.amazonaws.services.comprehend.AmazonComprehendClientBuilder;
 import com.amazonaws.services.comprehend.model.DetectSentimentRequest;
 import com.amazonaws.services.comprehend.model.DetectSentimentResult;
 
-public class SampleBolt extends BaseBasicBolt {
+public class SortBolt extends BaseBasicBolt {
     private static final long serialVersionUID = 177788290277634253L;
-    private static final Logger LOG = LoggerFactory.getLogger(SampleBolt.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SortBolt.class);
     private transient CharsetDecoder decoder;
 
     @Override
@@ -54,10 +54,8 @@ public class SampleBolt extends BaseBasicBolt {
     
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
-        String partitionKey = (String)input.getValueByField(SampleKinesisRecordScheme.FIELD_PARTITION_KEY);
-        String sequenceNumber = (String)input.getValueByField(SampleKinesisRecordScheme.FIELD_SEQUENCE_NUMBER);
-        byte[] payload = (byte[])input.getValueByField(SampleKinesisRecordScheme.FIELD_RECORD_DATA);
-        ByteBuffer buffer = ByteBuffer.wrap(payload);
+        //TODO: PARSE DATA FROM KAFKA
+        ByteBuffer buffer = ByteBuffer.wrap(null);
         String data = null; 
         try {
             data = decoder.decode(buffer).toString();
