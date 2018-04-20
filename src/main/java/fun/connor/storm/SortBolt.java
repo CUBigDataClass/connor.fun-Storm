@@ -21,31 +21,29 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.Map;
 
+import org.apache.storm.shade.org.json.simple.JSONObject;
+import org.apache.storm.shade.org.json.simple.parser.JSONParser;
+import org.apache.storm.shade.org.json.simple.parser.ParseException;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.storm.shade.org.json.simple.JSONArray;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Tuple;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.services.comprehend.AmazonComprehend;
-import com.amazonaws.services.comprehend.AmazonComprehendClientBuilder;
-import com.amazonaws.services.comprehend.model.DetectSentimentRequest;
-import com.amazonaws.services.comprehend.model.DetectSentimentResult;
-
 public class SortBolt extends BaseBasicBolt {
     private static final long serialVersionUID = 177788290277634253L;
     private static final Logger LOG = LoggerFactory.getLogger(SortBolt.class);
     private transient CharsetDecoder decoder;
+
+    private class Coords {
+        float latitude;
+        float longitude;
+    }
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
@@ -54,8 +52,8 @@ public class SortBolt extends BaseBasicBolt {
     
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
-        //TODO: PARSE DATA FROM KAFKA 
-        ByteBuffer buffer = ByteBuffer.wrap(null);
+        // TODO: PARSE DATA FROM KAFKA - will get full tweet JSON here
+        ByteBuffer buffer = ByteBuffer.wrap(input.getBinary(0));
         String data = null; 
         try {
             data = decoder.decode(buffer).toString();
@@ -63,22 +61,12 @@ public class SortBolt extends BaseBasicBolt {
             LOG.error("Exception when decoding record ", e);
         }
 
-        AWSCredentialsProvider awsCreds = DefaultAWSCredentialsProviderChain.getInstance();
+        // TODO: fetch locations.json, parse them
+        // TODO: Compare against time to see if we need a new set
+        // Sorry for this next line
+        String locationJSON = "[{'name': 'Boulder','ID': 'BLD0','centerLat': 40.015,'centerLon': -105.2705,'north': 40.15992753623188,'east': -105.45941607298043,'south': 39.87007246376812,'west': -105.08158392701955},{'name': 'New York','ID': 'NY0','centerLat': 40.7128,'centerLon': -74.006,'north': 40.857727536231884,'east': -74.19688190088912,'south': 40.56787246376812,'west': -73.81511809911086},{'name': 'Los Angeles','ID': 'LA0','centerLat': 34.0522,'centerLon': -118.2437,'north': 34.19712753623188,'east': -118.41833061260624,'south': 33.907272463768116,'west': -118.06906938739377},{'name': 'Seattle','ID': 'SEA0','centerLat': 47.6062,'centerLon': -122.3321,'north': 47.751127536231884,'east': -122.54669728390833,'south': 47.46127246376812,'west': -122.11750271609168}]";
 
-        AmazonComprehend comprehendClient =
-                AmazonComprehendClientBuilder.standard()
-                        .withCredentials(awsCreds)
-                        .withRegion("us-west-2")
-                        .build();
-
-        // Call detectSentiment API
-        System.out.println("Calling DetectSentiment");
-        DetectSentimentRequest detectSentimentRequest = new DetectSentimentRequest().withText(data)
-                .withLanguageCode("en");
-        DetectSentimentResult detectSentimentResult = comprehendClient.detectSentiment(detectSentimentRequest);
-
-        float sentiment = detectSentimentResult.getSentimentScore().getPositive() - detectSentimentResult.getSentimentScore().getNegative();
-
+        // Parse tweet JSON
         JSONParser parser = new JSONParser();
         Object obj = null;
         try {
@@ -89,29 +77,41 @@ public class SortBolt extends BaseBasicBolt {
 
         JSONObject jsonObject = (JSONObject) obj;
 
-        String tweetid = (String) jsonObject.get("ID");
-        String regionJSON = (String) jsonObject.get("regionData");
+        // Get relevant fields - ID, location, and text
+        String tweetID = (String) jsonObject.get("id_str");
 
-        Object regionRaw = null;
-        try {
-            regionRaw = parser.parse(regionJSON);
-        } catch (ParseException e) {
-            e.printStackTrace();
+        // Get text
+        JSONObject tweetFullObj = (JSONObject) jsonObject.get("extended_tweet");
+        String tweetFullText = (String) jsonObject.get("text");
+        if(tweetFullObj != null ) {
+            tweetFullText = (String) tweetFullObj.get("full_text");
         }
 
-        JSONObject regionObj = (JSONObject) regionRaw;
+        // Get location
+        JSONObject coordObj = (JSONObject) jsonObject.get("coordinates");
+        // Convert place coords to simple lat/long
+        JSONObject placeObj = (JSONObject) jsonObject.get("place");
+        JSONObject boundingBox = (JSONObject) placeObj.get("bounding_box");
+        JSONObject boxCoords = (JSONObject) boundingBox.get("coordinates");
+        Coords tweetLoc = boxToLatLon(boxCoords);
+        if(coordObj != null) {
+            JSONArray coordArray = (JSONArray) coordObj.get("coordinates");
+            tweetLoc.latitude = (float) coordArray.get(0);
+        }
 
-        String region = (String) regionObj.get("ID");
+        collector.emit(new Values("", tweetFullText, tweetID, ""));
 
-        collector.emit(new Values(region, sentiment, tweetid, regionJSON));
-
-        LOG.info("SampleBolt got record: partitionKey=" + partitionKey + ", " + " sequenceNumber=" + sequenceNumber
-                + ", data=" + data + ", sentiment=" + sentiment);
+        LOG.info("SampleBolt got record: data=" + data);
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("regionID", "sentiment", "tweetID", "regionJSON"));
+        declarer.declare(new Fields("regionID", "tweetText", "tweetID", "regionJSON"));
     }
 
+
+    private Coords boxToLatLon(JSONObject boxCoords) {
+        
+        return new Coords();
+    }
 }

@@ -1,8 +1,10 @@
 package fun.connor.storm;
 
-import com.amazonaws.services.kinesis.producer.KinesisProducer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.storm.shade.org.json.simple.JSONObject;
+import org.apache.storm.shade.org.json.simple.parser.JSONParser;
+import org.apache.storm.shade.org.json.simple.parser.ParseException;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -10,9 +12,6 @@ import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,8 +39,6 @@ public class WeatherBolt extends BaseBasicBolt {
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
-        //KinesisProducer kinesis = new KinesisProducer();
-        //this.kinesisProducer = kinesis;
         this.kafkaProducer = new KafkaProducer<>(props);
     }
 
@@ -83,9 +80,8 @@ public class WeatherBolt extends BaseBasicBolt {
 
                 // Put some records
                 ByteBuffer data = ByteBuffer.wrap(output.toString().getBytes("UTF-8"));
-                // doesn't block! tnx kpl, hope this works
-                //this.kinesisProducer.addUserRecord("connorfun-frontend", "0", data);
 
+                // doesn't block! tnx kpl, hope this works
                 this.kafkaProducer.send(new ProducerRecord<String, String>("test", regionID, this.formatOutput(regionID, avgSentiment, tweetID, regionJSON, weatherJSON)));
 
                 // Output fields
