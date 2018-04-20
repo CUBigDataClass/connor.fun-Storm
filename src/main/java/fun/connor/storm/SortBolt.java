@@ -41,8 +41,8 @@ public class SortBolt extends BaseBasicBolt {
     private transient CharsetDecoder decoder;
 
     private class Coords {
-        float latitude;
-        float longitude;
+        Double latitude;
+        Double longitude;
     }
 
     @Override
@@ -99,11 +99,11 @@ public class SortBolt extends BaseBasicBolt {
         Coords tweetLoc = this.boxToLatLon(boxCoords);
         if(coordObj != null) {
             JSONArray coordArray = (JSONArray) coordObj.get("coordinates");
-            tweetLoc.latitude = (float) coordArray.get(1);
-            tweetLoc.longitude = (float) coordArray.get(0);
+            tweetLoc.latitude = (Double) coordArray.get(1);
+            tweetLoc.longitude = (Double) coordArray.get(0);
         }
 
-        LOG.info("SampleBolt got coords: coord=" + tweetLoc);
+        LOG.info("SampleBolt got coords: coord=" + tweetLoc.latitude + ", " + tweetLoc.longitude);
 
         // Alright, now sort it given our list of regions.
 
