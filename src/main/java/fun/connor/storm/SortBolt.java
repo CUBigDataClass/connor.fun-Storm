@@ -123,8 +123,8 @@ public class SortBolt extends BaseBasicBolt {
         // Now we should have four points - add up and average
 
         for(Object coordObj : coordArray.toArray()) {
-            JSONArray coordJSON = (JSONArray) coordObj;
-
+            //JSONArray coordJSON = (JSONArray) coordObj;
+            LOG.info("SampleBolt got coord=" + coordObj);            
         }
         return new Coords();
     }

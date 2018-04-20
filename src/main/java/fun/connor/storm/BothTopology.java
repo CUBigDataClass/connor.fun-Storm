@@ -32,11 +32,11 @@ public class BothTopology {
 
         // kafka -> sort_bolt -- topic is 'raw-tweets'
         String topicName = "raw-tweets";
-        BrokerHosts hosts = new ZkHosts("localhost:2181", "/brokers"); // Assumes Kafka broker uses same zk
+        BrokerHosts hosts = new ZkHosts("35.182.127.62:2181", "/brokers"); // Assumes Kafka broker uses same zk
         // Takes in: BrokerHosts object, topic, zkRoot, zkSpoutID (here random)
         SpoutConfig spoutConfig = new SpoutConfig(hosts, topicName, "/" + topicName, UUID.randomUUID().toString());
         spoutConfig.zkPort = 2181;
-        spoutConfig.zkServers = Arrays.asList("localhost");
+        spoutConfig.zkServers = Arrays.asList("35.182.127.62");
         spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
         spoutConfig.bufferSizeBytes = 1024 * 1024 * 4;
         spoutConfig.fetchSizeBytes = 1024 * 1024 * 4;
