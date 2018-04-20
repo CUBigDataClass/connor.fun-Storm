@@ -24,15 +24,16 @@ public class BothTopology {
         TopologyBuilder aveBuilder = new TopologyBuilder(); // This topology will process sorted tweets
 
         // kafka -> sort_bolt -- topic is 'raw-tweets'
-        rawBuilder.setBolt("sorting_bolt", new SortBolt(), 2).setNumTasks(2).shuffleGrouping("raw_spout");
-        // sort_bolt -> kafka (USE REGION FOR TOPIC) I will do this is sorting_bolt -- Sam
+        rawBuilder.setBolt("sorting_bolt", new SortBolt(), 20).setNumTasks(20).shuffleGrouping("raw_spout");
+        // sort_bolt -> sentiment_bolt
+        // sentiment_bolt -> kafka (USE REGION FOR TOPIC) I will do this is in sentiment_bolt -- Sam
 
         // TOPOLOGY SPLIT
         // kafka regions -> averagebolt w/ direct grouping (will need #num region spouts)
         aveBuilder.setBolt("average_bolt",
                 new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
                         BaseWindowedBolt.Duration.minutes(2)),
-                10).setNumTasks(10).fieldsGrouping("print_bolt", new Fields("regionID")).setMemoryLoad(768.0);
+                600).fieldsGrouping("print_bolt", new Fields("regionID")).setMemoryLoad(768.0);
         aveBuilder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
         // Annnd weather bolt already outputs to kafka! Yay!
 
@@ -55,7 +56,7 @@ public class BothTopology {
 
         try {
             StormSubmitter.submitTopology("sorting-topology", rawConf, rawBuilder.createTopology());
-            StormSubmitter.submitTopology("average-topology", aveConf, aveBuilder.createTopology());
+            //StormSubmitter.submitTopology("average-topology", aveConf, aveBuilder.createTopology());
         } catch (AuthorizationException e) {
             e.printStackTrace();
         }

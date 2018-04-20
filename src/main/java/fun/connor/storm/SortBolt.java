@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.storm.shade.org.json.simple.JSONObject;
 import org.apache.storm.shade.org.json.simple.parser.JSONParser;
 import org.apache.storm.shade.org.json.simple.parser.ParseException;
+import org.apache.storm.shade.ring.middleware.multipart_params.temp_file__init;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
@@ -60,6 +61,7 @@ public class SortBolt extends BaseBasicBolt {
         } catch (CharacterCodingException e) {
             LOG.error("Exception when decoding record ", e);
         }
+        LOG.info("SampleBolt got record: data=" + data);
 
         // TODO: fetch locations.json, parse them
         // TODO: Compare against time to see if we need a new set
@@ -87,21 +89,26 @@ public class SortBolt extends BaseBasicBolt {
             tweetFullText = (String) tweetFullObj.get("full_text");
         }
 
+        LOG.info("SampleBolt got text: text=" + tweetFullText);
+
         // Get location
         JSONObject coordObj = (JSONObject) jsonObject.get("coordinates");
         // Convert place coords to simple lat/long
         JSONObject placeObj = (JSONObject) jsonObject.get("place");
         JSONObject boundingBox = (JSONObject) placeObj.get("bounding_box");
-        JSONObject boxCoords = (JSONObject) boundingBox.get("coordinates");
-        Coords tweetLoc = boxToLatLon(boxCoords);
+        JSONArray boxCoords = (JSONArray) boundingBox.get("coordinates");
+        Coords tweetLoc = this.boxToLatLon(boxCoords);
         if(coordObj != null) {
             JSONArray coordArray = (JSONArray) coordObj.get("coordinates");
-            tweetLoc.latitude = (float) coordArray.get(0);
+            tweetLoc.latitude = (float) coordArray.get(1);
+            tweetLoc.longitude = (float) coordArray.get(0);
         }
 
-        collector.emit(new Values("", tweetFullText, tweetID, ""));
+        LOG.info("SampleBolt got coords: coord=" + tweetLoc);
 
-        LOG.info("SampleBolt got record: data=" + data);
+        // Alright, now sort it given our list of regions.
+
+        collector.emit(new Values("", tweetFullText, tweetID, ""));
     }
 
     @Override
@@ -110,8 +117,16 @@ public class SortBolt extends BaseBasicBolt {
     }
 
 
-    private Coords boxToLatLon(JSONObject boxCoords) {
-        
+    private Coords boxToLatLon(JSONArray boxCoords) {
+        JSONArray coordWrapper = (JSONArray) boxCoords.get(0);
+        JSONArray coordArray = (JSONArray) coordWrapper.get(0);
+
+        // Now we should have four points - add up and average
+
+        for(Object coordObj : coordArray.toArray()) {
+            JSONArray coordJSON = (JSONArray) coordObj;
+
+        }
         return new Coords();
     }
 }
