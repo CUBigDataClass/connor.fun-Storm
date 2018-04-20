@@ -34,7 +34,7 @@ public class BothTopology {
         String topicName = "raw-tweets";
 
 
-        BrokerHosts hosts = new ZkHosts("35.182.127.62:2181", "/brokers"); // Assumes Kafka broker uses same zk
+        BrokerHosts hosts = new ZkHosts("hopefullydoesnt:matter", "/brokers"); // Assumes Kafka broker uses same zk
         // Takes in: BrokerHosts object, topic, zkRoot, zkSpoutID (here random)
         SpoutConfig spoutConfig = new SpoutConfig(hosts, topicName, "/" + topicName, UUID.randomUUID().toString());
         spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
