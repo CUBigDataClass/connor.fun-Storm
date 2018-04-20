@@ -55,7 +55,7 @@ public class ProcessTopology {
 
         topoConf.setMaxSpoutPending(5000);
         try {
-            StormSubmitter.submitTopology("sorting-topology", topoConf, builder.createTopology());
+            StormSubmitter.submitTopology("sorting-topology", topoConf, rawBuilder.createTopology());
         } catch (AuthorizationException e) {
             e.printStackTrace();
         }
