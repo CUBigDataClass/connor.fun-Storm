@@ -31,17 +31,13 @@ public class BothTopology {
         TopologyBuilder aveBuilder = new TopologyBuilder(); // This topology will process sorted tweets
 
         //TODO: Read zookeeper IP from command line args
-
-        // kafka -> sort_bolt -- topic is 'raw-tweets'
         String topicName = "raw-tweets";
+
+
         BrokerHosts hosts = new ZkHosts("35.182.127.62:2181", "/brokers"); // Assumes Kafka broker uses same zk
         // Takes in: BrokerHosts object, topic, zkRoot, zkSpoutID (here random)
         SpoutConfig spoutConfig = new SpoutConfig(hosts, topicName, "/" + topicName, UUID.randomUUID().toString());
-        spoutConfig.zkPort = 2181;
-        spoutConfig.zkServers = Arrays.asList("35.182.127.62");
         spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
-        spoutConfig.bufferSizeBytes = 1024 * 1024 * 4;
-        spoutConfig.fetchSizeBytes = 1024 * 1024 * 4;
 
         rawBuilder.setSpout("raw_spout", new KafkaSpout(spoutConfig));
         rawBuilder.setBolt("sorting_bolt", new SortBolt(), 20).setNumTasks(20).shuffleGrouping("raw_spout");

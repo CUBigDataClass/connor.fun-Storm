@@ -99,8 +99,8 @@ public class SortBolt extends BaseBasicBolt {
         Coords tweetLoc = this.boxToLatLon(boxCoords);
         if(coordObj != null) {
             JSONArray coordArray = (JSONArray) coordObj.get("coordinates");
-            tweetLoc.latitude = (Double) coordArray.get(1);
-            tweetLoc.longitude = (Double) coordArray.get(0);
+            tweetLoc.latitude = (Double) coordArray.get(0);
+            tweetLoc.longitude = (Double) coordArray.get(1);
         }
 
         LOG.info("SampleBolt got coords: coord=" + tweetLoc.latitude + ", " + tweetLoc.longitude);
