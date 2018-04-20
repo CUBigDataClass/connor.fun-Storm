@@ -1,6 +1,7 @@
 package fun.connor.storm;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.UUID;
 
 import org.apache.storm.generated.AuthorizationException;
@@ -34,6 +35,8 @@ public class BothTopology {
         BrokerHosts hosts = new ZkHosts("localhost:2181", "/brokers"); // Assumes Kafka broker uses same zk
         // Takes in: BrokerHosts object, topic, zkRoot, zkSpoutID (here random)
         SpoutConfig spoutConfig = new SpoutConfig(hosts, topicName, "/" + topicName, UUID.randomUUID().toString());
+        spoutConfig.zkPort = 2181;
+        spoutConfig.zkServers = Arrays.asList("localhost");
         spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
         spoutConfig.bufferSizeBytes = 1024 * 1024 * 4;
         spoutConfig.fetchSizeBytes = 1024 * 1024 * 4;
