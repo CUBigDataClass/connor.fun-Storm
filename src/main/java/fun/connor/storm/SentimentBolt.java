@@ -19,7 +19,7 @@ public class SentimentBolt extends ShellBolt implements IRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("regionID", "sentiment", "tweetID", "regionJSON"));
+        declarer.declare(new Fields("regionID", "sentiment", "tweetID", "regionJSON", "possiblySensitive"));
     }
 
     @Override

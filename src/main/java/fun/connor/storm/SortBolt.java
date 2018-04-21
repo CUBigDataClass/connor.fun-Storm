@@ -1,18 +1,3 @@
-/*
- * Copyright 2013-2014 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Amazon Software License (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- * http://aws.amazon.com/asl/
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
 package fun.connor.storm;
 
 import java.nio.ByteBuffer;
@@ -28,7 +13,6 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.storm.shade.org.eclipse.jetty.util.ajax.JSON;
 import org.apache.storm.shade.org.json.simple.JSONArray;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
@@ -85,6 +69,7 @@ public class SortBolt extends BaseBasicBolt {
 
         // Get relevant fields - ID, location, and text
         String tweetID = (String) jsonObject.get("id_str");
+        Boolean sensitivity = (Boolean) jsonObject.get("possibly_sensitive");
 
         // Get text
         JSONObject tweetFullObj = (JSONObject) jsonObject.get("extended_tweet");
@@ -104,8 +89,8 @@ public class SortBolt extends BaseBasicBolt {
 
         if(coordObj != null) {
             JSONArray coordArray = (JSONArray) coordObj.get("coordinates");
-            tweetLoc.latitude = ((Double) coordArray.get(0));
-            tweetLoc.longitude = ((Double) coordArray.get(1));
+            tweetLoc.latitude = this.jsonToDouble(coordArray, 0);
+            tweetLoc.longitude =  this.jsonToDouble(coordArray, 1);
         }
 
         // Alright, now sort it given our list of regions.
@@ -123,12 +108,21 @@ public class SortBolt extends BaseBasicBolt {
         if(region == null) return; // Don't emit, tweet doesn't belong in a region
 
         LOG.info("SortBolt got tweet: from region " + region.get("ID") + " with id " + tweetID);
-        collector.emit(new Values(region.get("ID"), tweetFullText, tweetID, region.toString()));
+        collector.emit(new Values(region.get("ID"), tweetFullText, tweetID, region, sensitivity));
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("regionID", "tweetText", "tweetID", "regionJSON"));
+        declarer.declare(new Fields("regionID", "tweetText", "tweetID", "regionJSON", "possiblySensitive"));
+    }
+
+    private Double jsonToDouble(JSONArray arr, int loc) {
+        Object obj = arr.get(loc);
+        if(obj instanceof Long) {
+            return ((Long) obj).doubleValue();
+        } else {
+            return (Double) obj;
+        }
     }
 
     private JSONObject coordsToRegion(Coords loc, JSONArray regions) {
@@ -158,8 +152,8 @@ public class SortBolt extends BaseBasicBolt {
             JSONArray coordArray = (JSONArray) coordObj;
 
             if(coordObj != null) {
-                avgCoords.latitude += ((Double) coordArray.get(0));
-                avgCoords.longitude += ((Double) coordArray.get(1));
+                avgCoords.latitude += this.jsonToDouble(coordArray, 0);
+                avgCoords.longitude += this.jsonToDouble(coordArray, 1);
             }
         }
         avgCoords.latitude = avgCoords.latitude / 4;
