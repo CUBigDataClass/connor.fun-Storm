@@ -40,7 +40,7 @@ public class KafkaRegionBolt extends BaseBasicBolt {
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
         // doesn't block! tnx kpl, hope this works
-        this.kafkaProducer.send(new ProducerRecord<String, String>("test", input.getString(0), input.getString(1)));
+        this.kafkaProducer.send(new ProducerRecord<String, String>("sentiment-tweets", input.getString(0), input.getString(1)));
 
     }
 

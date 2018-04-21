@@ -123,7 +123,7 @@ public class SortBolt extends BaseBasicBolt {
         if(region == null) return; // Don't emit, tweet doesn't belong in a region
 
         LOG.info("SortBolt got tweet: from region " + region.get("ID") + " with id " + tweetID);
-        collector.emit(new Values(region.get("ID"), tweetFullText, tweetID, region.toJSONString()));
+        collector.emit(new Values(region.get("ID"), tweetFullText, tweetID, region.toString()));
     }
 
     @Override

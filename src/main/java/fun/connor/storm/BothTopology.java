@@ -52,7 +52,7 @@ public class BothTopology {
         rawBuilder.setSpout("raw_spout", new KafkaSpout(spoutConfig));
         rawBuilder.setBolt("sorting_bolt", new SortBolt(), 20).setNumTasks(20).shuffleGrouping("raw_spout");
         rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 20).shuffleGrouping("sorting_bolt");
-        rawBuilder.setBolt("region_bolt", new KafkaRegionBolt(), 10);//.fieldsGrouping("regionID", "sentiment_bolt");
+        rawBuilder.setBolt("region_bolt", new KafkaRegionBolt(), 10).shuffleGrouping("sentiment_bolt");
         // sentiment_bolt -> kafka (USE REGION FOR TOPIC)
 
         // TOPOLOGY SPLIT
@@ -60,7 +60,7 @@ public class BothTopology {
 //        aveBuilder.setBolt("average_bolt",
 //                new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
 //                        BaseWindowedBolt.Duration.minutes(2)),
-        aveBuilder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
+        //aveBuilder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
         // Annnd weather bolt already outputs to kafka! Yay!
 
         Config rawConf = new Config();
