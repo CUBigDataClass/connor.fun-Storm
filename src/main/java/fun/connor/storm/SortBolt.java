@@ -99,8 +99,8 @@ public class SortBolt extends BaseBasicBolt {
         Coords tweetLoc = this.boxToLatLon(boxCoords);
         if(coordObj != null) {
             JSONArray coordArray = (JSONArray) coordObj.get("coordinates");
-            tweetLoc.latitude = (Double) coordArray.get(0);
-            tweetLoc.longitude = (Double) coordArray.get(1);
+            tweetLoc.latitude = Double.parseDouble((String) coordArray.get(0));
+            tweetLoc.longitude = Double.parseDouble((String) coordArray.get(1));
         }
 
         LOG.info("SampleBolt got coords: coord=" + tweetLoc.latitude + ", " + tweetLoc.longitude);
@@ -118,14 +118,19 @@ public class SortBolt extends BaseBasicBolt {
 
     private Coords boxToLatLon(JSONArray boxCoords) {
         JSONArray coordWrapper = (JSONArray) boxCoords.get(0);
-        JSONArray coordArray = (JSONArray) coordWrapper.get(0);
 
         // Now we should have four points - add up and average
+        Coords avgCoords = new Coords();
 
-        for(Object coordObj : coordArray.toArray()) {
-            //JSONArray coordJSON = (JSONArray) coordObj;
-            LOG.info("SampleBolt got coord=" + coordObj);            
+        for(Object coordObj : coordWrapper.toArray()) {
+            JSONArray coordArray = (JSONArray) coordObj;
+
+            avgCoords.latitude += Double.parseDouble((String) coordArray.get(0));
+            avgCoords.longitude += Double.parseDouble((String) coordArray.get(1));
         }
-        return new Coords();
+        avgCoords.latitude /= 4;
+        avgCoords.longitude /= 4;
+
+        return avgCoords;
     }
 }
