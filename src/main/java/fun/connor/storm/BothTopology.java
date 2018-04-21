@@ -1,7 +1,9 @@
 package fun.connor.storm;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Properties;
 import java.util.UUID;
 
 import org.apache.storm.generated.AuthorizationException;
@@ -24,19 +26,29 @@ import org.apache.storm.topology.TopologyBuilder;
 
 public class BothTopology {
     private static final Logger LOG = LoggerFactory.getLogger(BothTopology.class);
+    private static String zookeeperEndpoint;
+    private static String zookeeperPrefix;
 
     public static void main(String[] args) throws IllegalArgumentException, KeeperException, InterruptedException,
             AlreadyAliveException, InvalidTopologyException, IOException {
+        
+        String propertiesFile = null;
+
+        if (args.length != 1) {
+            printUsageAndExit();
+        } else {
+            propertiesFile = args[0];
+        }
+
+        configure(propertiesFile);
+
         TopologyBuilder rawBuilder = new TopologyBuilder(); // This topology will process raw tweets
         TopologyBuilder aveBuilder = new TopologyBuilder(); // This topology will process sorted tweets
 
-        //TODO: Read zookeeper IP from command line args
         String topicName = "raw-tweets";
-
-
-        BrokerHosts hosts = new ZkHosts("hopefullydoesnt:matter", "/brokers"); // Assumes Kafka broker uses same zk
+        BrokerHosts hosts = new ZkHosts(zookeeperEndpoint, "/brokers"); // Assumes Kafka broker uses same zk
         // Takes in: BrokerHosts object, topic, zkRoot, zkSpoutID (here random)
-        SpoutConfig spoutConfig = new SpoutConfig(hosts, topicName, "/" + topicName, UUID.randomUUID().toString());
+        SpoutConfig spoutConfig = new SpoutConfig(hosts, topicName, "/" + zookeeperPrefix, UUID.randomUUID().toString());
         spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
 
         rawBuilder.setSpout("raw_spout", new KafkaSpout(spoutConfig));
@@ -75,6 +87,34 @@ public class BothTopology {
         } catch (AuthorizationException e) {
             e.printStackTrace();
         }
+    }
+
+    private static void configure(String propertiesFile) throws IOException {
+        FileInputStream inputStream = new FileInputStream(propertiesFile);
+        Properties properties = new Properties();
+        try {
+            properties.load(inputStream);
+        } finally {
+            inputStream.close();
+        }
+
+        String zookeeperEndpointOverride = properties.getProperty("zookeeperEndpoint");
+        if (zookeeperEndpointOverride != null) {
+            zookeeperEndpoint = zookeeperEndpointOverride;
+        }
+        LOG.info("Using zookeeper endpoint " + zookeeperEndpoint);
+
+        String zookeeperPrefixOverride = properties.getProperty("zookeeperPrefix");
+        if (zookeeperPrefixOverride != null) {
+            zookeeperPrefix = zookeeperPrefixOverride;
+        }
+        LOG.info("Using zookeeper prefix " + zookeeperPrefix);
+
+    }
+
+    private static void printUsageAndExit() {
+        System.out.println("Usage: " + BothTopology.class.getName() + " <propertiesFile>");
+        System.exit(-1);
     }
 
 }
