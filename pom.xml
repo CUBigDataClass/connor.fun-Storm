@@ -9,8 +9,12 @@
     <version>1.0</version>
 
     <build>
+        <resources>
+            <resource>
+                <directory>${basedir}/multilang</directory>
+            </resource>
+        </resources>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -128,10 +132,17 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.storm</groupId>
+            <artifactId>multilang-python</artifactId>
+            <version>1.2.1</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-comprehend</artifactId>
             <version>1.11.308</version>
         </dependency>
+        
         <dependency>
             <groupId>org.apache.storm</groupId>
             <artifactId>storm-kafka</artifactId>

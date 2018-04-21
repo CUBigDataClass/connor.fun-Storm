@@ -2,13 +2,11 @@ package fun.connor.storm;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Properties;
 import java.util.UUID;
 
 import org.apache.storm.generated.AuthorizationException;
 import org.apache.storm.kafka.BrokerHosts;
-import org.apache.storm.kafka.KafkaConfig;
 import org.apache.storm.kafka.KafkaSpout;
 import org.apache.storm.kafka.SpoutConfig;
 import org.apache.storm.kafka.ZkHosts;
@@ -53,7 +51,8 @@ public class BothTopology {
 
         rawBuilder.setSpout("raw_spout", new KafkaSpout(spoutConfig));
         rawBuilder.setBolt("sorting_bolt", new SortBolt(), 20).setNumTasks(20).shuffleGrouping("raw_spout");
-        // sort_bolt -> sentiment_bolt
+        rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 20).shuffleGrouping("sorting_bolt");
+        rawBuilder.setBolt("region_bolt", new KafkaRegionBolt(), 10);//.fieldsGrouping("regionID", "sentiment_bolt");
         // sentiment_bolt -> kafka (USE REGION FOR TOPIC)
 
         // TOPOLOGY SPLIT

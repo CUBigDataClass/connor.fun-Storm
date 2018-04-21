@@ -28,6 +28,7 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.storm.shade.org.eclipse.jetty.util.ajax.JSON;
 import org.apache.storm.shade.org.json.simple.JSONArray;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
@@ -40,9 +41,14 @@ public class SortBolt extends BaseBasicBolt {
     private static final Logger LOG = LoggerFactory.getLogger(SortBolt.class);
     private transient CharsetDecoder decoder;
 
-    private class Coords {
-        Double latitude;
-        Double longitude;
+    private static class Coords {
+        Coords(){
+            this.latitude = 0.0;
+            this.longitude = 0.0;
+        }
+
+        public Double latitude;
+        public Double longitude;
     }
 
     @Override
@@ -60,12 +66,11 @@ public class SortBolt extends BaseBasicBolt {
         } catch (CharacterCodingException e) {
             LOG.error("Exception when decoding record ", e);
         }
-        LOG.info("SampleBolt got record: data=" + data);
 
         // TODO: fetch locations.json, parse them
         // TODO: Compare against time to see if we need a new set
         // Sorry for this next line
-        String locationJSON = "[{'name': 'Boulder','ID': 'BLD0','centerLat': 40.015,'centerLon': -105.2705,'north': 40.15992753623188,'east': -105.45941607298043,'south': 39.87007246376812,'west': -105.08158392701955},{'name': 'New York','ID': 'NY0','centerLat': 40.7128,'centerLon': -74.006,'north': 40.857727536231884,'east': -74.19688190088912,'south': 40.56787246376812,'west': -73.81511809911086},{'name': 'Los Angeles','ID': 'LA0','centerLat': 34.0522,'centerLon': -118.2437,'north': 34.19712753623188,'east': -118.41833061260624,'south': 33.907272463768116,'west': -118.06906938739377},{'name': 'Seattle','ID': 'SEA0','centerLat': 47.6062,'centerLon': -122.3321,'north': 47.751127536231884,'east': -122.54669728390833,'south': 47.46127246376812,'west': -122.11750271609168}]";
+        String locationJSON = "[{\"name\": \"Boulder\",\"ID\": \"BLD0\",\"centerLat\": 40.015,\"centerLon\": -105.2705,\"north\": 40.15992753623188,\"east\": -105.45941607298043,\"south\": 39.87007246376812,\"west\": -105.08158392701955},{\"name\": \"New York\",\"ID\": \"NY0\",\"centerLat\": 40.7128,\"centerLon\": -74.006,\"north\": 40.857727536231884,\"east\": -74.19688190088912,\"south\": 40.56787246376812,\"west\": -73.81511809911086},{\"name\": \"Los Angeles\",\"ID\": \"LA0\",\"centerLat\": 34.0522,\"centerLon\": -118.2437,\"north\": 34.19712753623188,\"east\": -118.41833061260624,\"south\": 33.907272463768116,\"west\": -118.06906938739377},{\"name\": \"Seattle\",\"ID\": \"SEA0\",\"centerLat\": 47.6062,\"centerLon\": -122.3321,\"north\": 47.751127536231884,\"east\": -122.54669728390833,\"south\": 47.46127246376812,\"west\": -122.11750271609168}]";
 
         // Parse tweet JSON
         JSONParser parser = new JSONParser();
@@ -88,26 +93,37 @@ public class SortBolt extends BaseBasicBolt {
             tweetFullText = (String) tweetFullObj.get("full_text");
         }
 
-        LOG.info("SampleBolt got text: text=" + tweetFullText);
-
         // Get location
         JSONObject coordObj = (JSONObject) jsonObject.get("coordinates");
         // Convert place coords to simple lat/long
         JSONObject placeObj = (JSONObject) jsonObject.get("place");
         JSONObject boundingBox = (JSONObject) placeObj.get("bounding_box");
         JSONArray boxCoords = (JSONArray) boundingBox.get("coordinates");
+        
         Coords tweetLoc = this.boxToLatLon(boxCoords);
+
         if(coordObj != null) {
             JSONArray coordArray = (JSONArray) coordObj.get("coordinates");
-            tweetLoc.latitude = Double.parseDouble((String) coordArray.get(0));
-            tweetLoc.longitude = Double.parseDouble((String) coordArray.get(1));
+            tweetLoc.latitude = ((Double) coordArray.get(0));
+            tweetLoc.longitude = ((Double) coordArray.get(1));
         }
 
-        LOG.info("SampleBolt got coords: coord=" + tweetLoc.latitude + ", " + tweetLoc.longitude);
-
         // Alright, now sort it given our list of regions.
+        // Parse JSON, get JSON array
+        Object regionObj = null;
+        try {
+            regionObj = parser.parse(locationJSON);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
 
-        collector.emit(new Values("", tweetFullText, tweetID, ""));
+        JSONArray locationObj = (JSONArray) regionObj;
+        JSONObject region = coordsToRegion(tweetLoc, locationObj);
+
+        if(region == null) return; // Don't emit, tweet doesn't belong in a region
+
+        LOG.info("SortBolt got tweet: from region " + region.get("ID") + " with id " + tweetID);
+        collector.emit(new Values(region.get("ID"), tweetFullText, tweetID, region.toJSONString()));
     }
 
     @Override
@@ -115,25 +131,39 @@ public class SortBolt extends BaseBasicBolt {
         declarer.declare(new Fields("regionID", "tweetText", "tweetID", "regionJSON"));
     }
 
+    private JSONObject coordsToRegion(Coords loc, JSONArray regions) {
+        for(Object regionObj : regions.toArray()) {
+            JSONObject regionJSON = (JSONObject) regionObj;
+            Double north = (Double) regionJSON.get("north");
+            Double south = (Double) regionJSON.get("south");
+            Double west = (Double) regionJSON.get("west");
+            Double east = (Double) regionJSON.get("east");
+
+            if(north > loc.longitude && loc.longitude > south && west > loc.latitude && loc.latitude > east) {
+                return regionJSON;
+            }
+        }
+        // No matches, return null
+        return null;
+    } 
 
     private Coords boxToLatLon(JSONArray boxCoords) {
         JSONArray coordWrapper = (JSONArray) boxCoords.get(0);
-
         // Now we should have four points - add up and average
         Coords avgCoords = new Coords();
-        int locCount = 0;
+
+        if(coordWrapper == null) return avgCoords;
 
         for(Object coordObj : coordWrapper.toArray()) {
             JSONArray coordArray = (JSONArray) coordObj;
 
             if(coordObj != null) {
-                avgCoords.latitude += Double.parseDouble((String) coordArray.get(0));
-                avgCoords.longitude += Double.parseDouble((String) coordArray.get(1));
-                locCount++;
+                avgCoords.latitude += ((Double) coordArray.get(0));
+                avgCoords.longitude += ((Double) coordArray.get(1));
             }
         }
-        avgCoords.latitude /= locCount;
-        avgCoords.longitude /= locCount;
+        avgCoords.latitude = avgCoords.latitude / 4;
+        avgCoords.longitude = avgCoords.longitude / 4;
 
         return avgCoords;
     }
