@@ -121,15 +121,19 @@ public class SortBolt extends BaseBasicBolt {
 
         // Now we should have four points - add up and average
         Coords avgCoords = new Coords();
+        int locCount = 0;
 
         for(Object coordObj : coordWrapper.toArray()) {
             JSONArray coordArray = (JSONArray) coordObj;
 
-            avgCoords.latitude += Double.parseDouble((String) coordArray.get(0));
-            avgCoords.longitude += Double.parseDouble((String) coordArray.get(1));
+            if(coordObj != null) {
+                avgCoords.latitude += Double.parseDouble((String) coordArray.get(0));
+                avgCoords.longitude += Double.parseDouble((String) coordArray.get(1));
+                locCount++;
+            }
         }
-        avgCoords.latitude /= 4;
-        avgCoords.longitude /= 4;
+        avgCoords.latitude /= locCount;
+        avgCoords.longitude /= locCount;
 
         return avgCoords;
     }
