@@ -42,7 +42,6 @@ public class SortBolt extends BaseBasicBolt {
     
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
-        // TODO: PARSE DATA FROM KAFKA - will get full tweet JSON here
         ByteBuffer buffer = ByteBuffer.wrap(input.getBinary(0));
         String data = null; 
         try {
