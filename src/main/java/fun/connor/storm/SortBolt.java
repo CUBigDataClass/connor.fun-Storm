@@ -77,14 +77,22 @@ public class SortBolt extends BaseBasicBolt {
             tweetFullText = (String) tweetFullObj.get("full_text");
         }
 
+        Coords tweetLoc = new Coords();
+
         // Get location
         JSONObject coordObj = (JSONObject) jsonObject.get("coordinates");
         // Convert place coords to simple lat/long
         JSONObject placeObj = (JSONObject) jsonObject.get("place");
-        JSONObject boundingBox = (JSONObject) placeObj.get("bounding_box");
-        JSONArray boxCoords = (JSONArray) boundingBox.get("coordinates");
+        if(placeObj != null) {
+            JSONObject boundingBox = (JSONObject) placeObj.get("bounding_box");
+            if(boundingBox != null) {
+                JSONArray boxCoords = (JSONArray) boundingBox.get("coordinates");
+                if(boxCoords != null) {
+                    tweetLoc = this.boxToLatLon(boxCoords);
+                }
+            }
+        }
         
-        Coords tweetLoc = this.boxToLatLon(boxCoords);
 
         if(coordObj != null) {
             JSONArray coordArray = (JSONArray) coordObj.get("coordinates");

@@ -67,8 +67,7 @@ public class BothTopology {
         rawConf.setFallBackOnJavaSerialization(true);
         rawConf.setDebug(true);                 
         rawConf.setNumEventLoggers(5);          // Arbritrary
-        rawConf.setNumWorkers(1);               // 1 for debugging
-        rawConf.setMessageTimeoutSecs(1200000); // 20 mins
+        rawConf.setNumWorkers(10);              // ^
         rawConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
         rawConf.setMaxSpoutPending(5000);
 
@@ -77,6 +76,7 @@ public class BothTopology {
         aveConf.setDebug(true);                 
         aveConf.setNumEventLoggers(5);          // Arbritrary
         aveConf.setNumWorkers(10);              // ^
+        aveConf.setMessageTimeoutSecs(1200000); // 20 mins
         aveConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
         aveConf.setMaxSpoutPending(5000);
 
