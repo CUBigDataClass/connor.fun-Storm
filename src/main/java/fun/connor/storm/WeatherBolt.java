@@ -1,8 +1,10 @@
 package fun.connor.storm;
 
-import com.amazonaws.services.kinesis.producer.KinesisProducer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.storm.shade.org.json.simple.JSONObject;
+import org.apache.storm.shade.org.json.simple.parser.JSONParser;
+import org.apache.storm.shade.org.json.simple.parser.ParseException;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -10,9 +12,6 @@ import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,27 +39,16 @@ public class WeatherBolt extends BaseBasicBolt {
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
-        //KinesisProducer kinesis = new KinesisProducer();
-        //this.kinesisProducer = kinesis;
         this.kafkaProducer = new KafkaProducer<>(props);
     }
 
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
         // Open up weather to pre-prescribed regionID
-        String regionJSON = (String) input.getValue(3);
+        JSONObject regionJSON = (JSONObject) input.getValue(3);
 
-        JSONParser parser = new JSONParser();
-        Object obj = null;
-        try {
-            obj = parser.parse(regionJSON);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
-        JSONObject jsonObject = (JSONObject) obj;
-        Double lat = (Double) jsonObject.get("centerLat");
-        Double lon = (Double) jsonObject.get("centerLon");
+        Double lat = this.jsonToDouble(regionJSON.get("centerLat"));
+        Double lon = this.jsonToDouble(regionJSON.get("centerLon"));
 
         // Call the weather API
         String key = System.getenv("WEATHER_KEY");
@@ -79,17 +67,11 @@ public class WeatherBolt extends BaseBasicBolt {
 
                 LOG.info("WeatherBolt got region: regionID=" + regionID + " with average sentiment of " + avgSentiment + " and weather of " + weatherJSON);
 
-                Values output = new Values(regionID, avgSentiment, tweetID, regionJSON, weatherJSON);
-
-                // Put some records
-                ByteBuffer data = ByteBuffer.wrap(output.toString().getBytes("UTF-8"));
                 // doesn't block! tnx kpl, hope this works
-                //this.kinesisProducer.addUserRecord("connorfun-frontend", "0", data);
-
                 this.kafkaProducer.send(new ProducerRecord<String, String>("test", regionID, this.formatOutput(regionID, avgSentiment, tweetID, regionJSON, weatherJSON)));
 
                 // Output fields
-                collector.emit(output);
+                //collector.emit(output);
             } finally {
                 is.close();
             }
@@ -98,19 +80,17 @@ public class WeatherBolt extends BaseBasicBolt {
         }
     }
 
-    private String formatOutput(String regionID, Float avgSentiment, String tweetID, String regionJSON, String weatherJSON) {
+    private String formatOutput(String regionID, Float avgSentiment, String tweetID, JSONObject regionJSON, String weatherJSON) {
         // Parse regionJSON and weatherJSON so they become sub-objects
-        Object regionRaw = null;
         Object weatherRaw = null;
         JSONParser parser = new JSONParser();
         try {
-            regionRaw = parser.parse(regionJSON);
             weatherRaw = parser.parse(weatherJSON);
         } catch (ParseException e) {
             e.printStackTrace();
         }
 
-        JSONObject region = (JSONObject) regionRaw;
+        JSONObject region = regionJSON;
         JSONObject weather = (JSONObject) weatherRaw;
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("sentiment", avgSentiment);
@@ -133,6 +113,14 @@ public class WeatherBolt extends BaseBasicBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("regionID", "avgSentiment", "tweetID", "regionJSON", "weatherJSON"));
+        //declarer.declare(new Fields("regionID", "avgSentiment", "tweetID", "regionJSON", "weatherJSON"));
+    }
+
+    private Double jsonToDouble(Object obj) {
+        if(obj instanceof Long) {
+            return ((Long) obj).doubleValue();
+        } else {
+            return (Double) obj;
+        }
     }
 }

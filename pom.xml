@@ -9,8 +9,12 @@
     <version>1.0</version>
 
     <build>
+        <resources>
+            <resource>
+                <directory>${basedir}/multilang</directory>
+            </resource>
+        </resources>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -36,7 +40,7 @@
                   <transformers>
                       <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                       <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                          <mainClass>fun.connor.storm.ProcessTopology</mainClass>
+                          <mainClass>fun.connor.storm.BothTopology</mainClass>
                       </transformer>
                   </transformers>
               </configuration>
@@ -109,9 +113,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.googlecode.json-simple</groupId>
-            <artifactId>json-simple</artifactId>
-            <version>1.1</version>
+            <groupId>javax.json</groupId>
+            <artifactId>javax.json-api</artifactId>
+            <version>1.0</version>
         </dependency>
 
         <dependency>
@@ -128,15 +132,21 @@
         </dependency>
 
         <dependency>
-            <groupId>com.amazonaws.services.kinesis.stormspout</groupId>
-            <artifactId>kinesis-storm-spout</artifactId>
-            <version>1.1.2-SNAPSHOT</version>
+            <groupId>org.apache.storm</groupId>
+            <artifactId>multilang-python</artifactId>
+            <version>1.2.1</version>
         </dependency>
 
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-comprehend</artifactId>
             <version>1.11.308</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.apache.storm</groupId>
+            <artifactId>storm-kafka</artifactId>
+            <version>1.2.1</version>
         </dependency>
 
     </dependencies>
