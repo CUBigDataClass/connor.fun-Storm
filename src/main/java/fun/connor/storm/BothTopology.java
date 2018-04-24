@@ -58,8 +58,6 @@ public class BothTopology {
         rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 10).setNumTasks(20).shuffleGrouping("raw_spout");
         rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 2).shuffleGrouping("sorting_bolt");
         //rawBuilder.setBolt("region_bolt", new KafkaRegionBolt(), 10).shuffleGrouping("sentiment_bolt");
-        // sentiment_bolt -> kafka (USE REGION FOR TOPIC)
-
 
         rawBuilder.setBolt("average_bolt", new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
                         BaseWindowedBolt.Duration.minutes(2)), 100)

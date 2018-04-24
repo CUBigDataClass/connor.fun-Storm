@@ -127,9 +127,9 @@ public class SortBolt extends BaseBasicBolt {
         declarer.declare(new Fields("regionID", "tweetText", "tweetID", "regionJSON", "possiblySensitive"));
     }
 
-    private JSONArray getRegions() throws MalformedURLException, IOException  {
+    private JSONArray getRegions() throws IOException  {
         // See if two minutes have passed
-        if(this.timestamp.before(new Timestamp(System.currentTimeMillis()))) {
+        if(this.timestamp.after(new Timestamp(System.currentTimeMillis()))) {
             // Sorry for this next line
             InputStream is = new URL(this.locationEndpoint + "/locations").openStream();
             BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
@@ -144,6 +144,8 @@ public class SortBolt extends BaseBasicBolt {
                 e.printStackTrace();
             }
             this.regions = (JSONArray) regionObj;
+
+            LOG.error("SortBolt got Region: " + this.regions.toString());
 
             this.timestamp = new Timestamp(System.currentTimeMillis() + 120000);
         }
