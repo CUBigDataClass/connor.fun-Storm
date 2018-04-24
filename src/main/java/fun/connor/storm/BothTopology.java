@@ -45,33 +45,30 @@ public class BothTopology {
 
         configure(propertiesFile);
 
-        TopologyBuilder rawBuilder = new TopologyBuilder(); // This topology will process raw tweets
-        TopologyBuilder aveBuilder = new TopologyBuilder(); // This topology will process sorted tweets
+        TopologyBuilder rawBuilder = new TopologyBuilder();
 
         String topicName = "raw-tweets";
         BrokerHosts hosts = new ZkHosts(zookeeperEndpoint, "/brokers"); // Assumes Kafka broker uses same zk
-        // Takes in: BrokerHosts object, topic, zkRoot, zkSpoutID (here random)
         SpoutConfig spoutConfig = new SpoutConfig(hosts, topicName, "/" + zookeeperPrefix, UUID.randomUUID().toString());
         spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
-
         rawBuilder.setSpout("raw_spout", new KafkaSpout(spoutConfig));
+        
         rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 10).setNumTasks(20).shuffleGrouping("raw_spout");
-        rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 2).shuffleGrouping("sorting_bolt");
+        rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 10).shuffleGrouping("sorting_bolt");
         //rawBuilder.setBolt("region_bolt", new KafkaRegionBolt(), 10).shuffleGrouping("sentiment_bolt");
 
         rawBuilder.setBolt("average_bolt", new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
                         BaseWindowedBolt.Duration.minutes(2)), 100)
                             .fieldsGrouping("sentiment_bolt", new Fields("regionID"));
-
         rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
-
         // Annnd weather bolt already outputs to kafka! Yay!
+
         Config rawConf = new Config();
         rawConf.setFallBackOnJavaSerialization(true);
         rawConf.setDebug(true);                 
         rawConf.setNumEventLoggers(5);          // Arbritrary
         rawConf.setNumWorkers(20);              // ^
-        rawConf.setMessageTimeoutSecs(1200000); // 20 mins
+        rawConf.setMessageTimeoutSecs(1400);    // 22 mins
         rawConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
         rawConf.setMaxSpoutPending(5000);
 

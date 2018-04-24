@@ -105,8 +105,8 @@ public class SortBolt extends BaseBasicBolt {
         // Alright, now sort it given our list of regions.
         if(coordObj != null) {
             JSONArray coordArray = (JSONArray) coordObj.get("coordinates");
-            tweetLoc.latitude = this.jsonToDouble(coordArray, 0);
-            tweetLoc.longitude =  this.jsonToDouble(coordArray, 1);
+            tweetLoc.latitude = this.jsonToDouble(coordArray.get(0));
+            tweetLoc.longitude =  this.jsonToDouble(coordArray.get(1));
         }
 
         try {
@@ -129,24 +129,26 @@ public class SortBolt extends BaseBasicBolt {
 
     private JSONArray getRegions() throws IOException  {
         // See if two minutes have passed
-        if(this.timestamp.after(new Timestamp(System.currentTimeMillis()))) {
+        if(this.timestamp.before(new Timestamp(System.currentTimeMillis()))) {
             // Sorry for this next line
             InputStream is = new URL(this.locationEndpoint + "/locations").openStream();
             BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
             String locationJSON = readAll(rd);
 
             // Parse JSON, get JSON array
+            Object regionWrapper = null;
             Object regionObj = null;
             JSONParser parser = new JSONParser();
             try {
-                regionObj = parser.parse(locationJSON);
+                regionWrapper = parser.parse(locationJSON);
+                regionObj = parser.parse((String) regionWrapper);
             } catch (ParseException e) {
                 e.printStackTrace();
             }
+
+            LOG.info("SortBolt got Region: " + regionObj.toString());
+
             this.regions = (JSONArray) regionObj;
-
-            LOG.error("SortBolt got Region: " + this.regions.toString());
-
             this.timestamp = new Timestamp(System.currentTimeMillis() + 120000);
         }
 
@@ -162,8 +164,7 @@ public class SortBolt extends BaseBasicBolt {
         return sb.toString();
     }
 
-    private Double jsonToDouble(JSONArray arr, int loc) {
-        Object obj = arr.get(loc);
+    private Double jsonToDouble(Object obj) {
         if(obj instanceof Long) {
             return ((Long) obj).doubleValue();
         } else {
@@ -174,10 +175,10 @@ public class SortBolt extends BaseBasicBolt {
     private JSONObject coordsToRegion(Coords loc, JSONArray regions) {
         for(Object regionObj : regions.toArray()) {
             JSONObject regionJSON = (JSONObject) regionObj;
-            Double north = (Double) regionJSON.get("north");
-            Double south = (Double) regionJSON.get("south");
-            Double west = (Double) regionJSON.get("west");
-            Double east = (Double) regionJSON.get("east");
+            Double north = this.jsonToDouble(regionJSON.get("north"));
+            Double south = this.jsonToDouble(regionJSON.get("south"));
+            Double west = this.jsonToDouble(regionJSON.get("west"));
+            Double east = this.jsonToDouble(regionJSON.get("east"));
 
             if(north > loc.longitude && loc.longitude > south && west > loc.latitude && loc.latitude > east) {
                 return regionJSON;
@@ -198,8 +199,8 @@ public class SortBolt extends BaseBasicBolt {
             JSONArray coordArray = (JSONArray) coordObj;
 
             if(coordObj != null) {
-                avgCoords.latitude += this.jsonToDouble(coordArray, 0);
-                avgCoords.longitude += this.jsonToDouble(coordArray, 1);
+                avgCoords.latitude += this.jsonToDouble(coordArray.get(0));
+                avgCoords.longitude += this.jsonToDouble(coordArray.get(1));
             }
         }
         avgCoords.latitude = avgCoords.latitude / 4;
