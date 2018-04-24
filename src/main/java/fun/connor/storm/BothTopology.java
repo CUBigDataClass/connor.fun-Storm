@@ -54,14 +54,11 @@ public class BothTopology {
         rawBuilder.setSpout("raw_spout", new KafkaSpout(spoutConfig));
         
         rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 10).setNumTasks(20).shuffleGrouping("raw_spout");
-        rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 10).shuffleGrouping("sorting_bolt");
-        //rawBuilder.setBolt("region_bolt", new KafkaRegionBolt(), 10).shuffleGrouping("sentiment_bolt");
+        rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 1).shuffleGrouping("sorting_bolt");
 
         rawBuilder.setBolt("average_bolt", new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
-                        BaseWindowedBolt.Duration.minutes(2)), 100)
-                            .fieldsGrouping("sentiment_bolt", new Fields("regionID"));
+                        BaseWindowedBolt.Duration.minutes(2)), 100).customGrouping("sentiment_bolt", new RegionGrouping());
         rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
-        // Annnd weather bolt already outputs to kafka! Yay!
 
         Config rawConf = new Config();
         rawConf.setFallBackOnJavaSerialization(true);
@@ -73,7 +70,7 @@ public class BothTopology {
         rawConf.setMaxSpoutPending(5000);
 
         try {
-            StormSubmitter.submitTopology("perfect-topology", rawConf, rawBuilder.createTopology());
+            StormSubmitter.submitTopology("the-topology", rawConf, rawBuilder.createTopology());
         } catch (AuthorizationException e) {
             e.printStackTrace();
         }
