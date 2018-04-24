@@ -1,9 +1,13 @@
 package fun.connor.storm;
 
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.sql.Timestamp;
 import java.util.Map;
 
 import org.apache.storm.shade.org.json.simple.JSONObject;
@@ -19,11 +23,15 @@ import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Tuple;
+import sun.reflect.annotation.ExceptionProxy;
 
 public class SortBolt extends BaseBasicBolt {
     private static final long serialVersionUID = 177788290277634253L;
     private static final Logger LOG = LoggerFactory.getLogger(SortBolt.class);
     private transient CharsetDecoder decoder;
+    private String locationEndpoint;
+    private Timestamp timestamp;
+    private JSONArray regions;
 
     private static class Coords {
         Coords(){
@@ -33,6 +41,11 @@ public class SortBolt extends BaseBasicBolt {
 
         public Double latitude;
         public Double longitude;
+    }
+
+    public SortBolt(String locationEndpoint) {
+        this.timestamp = new Timestamp(System.currentTimeMillis() - 1);
+        this.locationEndpoint = locationEndpoint;
     }
 
     @Override
@@ -50,13 +63,9 @@ public class SortBolt extends BaseBasicBolt {
             LOG.error("Exception when decoding record ", e);
         }
 
-        // TODO: fetch locations.json, parse them
-        // TODO: Compare against time to see if we need a new set
-        // Sorry for this next line
-        String locationJSON = "[{\"name\": \"Boulder\",\"ID\": \"BLD0\",\"centerLat\": 40.015,\"centerLon\": -105.2705,\"north\": 40.15992753623188,\"east\": -105.45941607298043,\"south\": 39.87007246376812,\"west\": -105.08158392701955},{\"name\": \"New York\",\"ID\": \"NY0\",\"centerLat\": 40.7128,\"centerLon\": -74.006,\"north\": 40.857727536231884,\"east\": -74.19688190088912,\"south\": 40.56787246376812,\"west\": -73.81511809911086},{\"name\": \"Los Angeles\",\"ID\": \"LA0\",\"centerLat\": 34.0522,\"centerLon\": -118.2437,\"north\": 34.19712753623188,\"east\": -118.41833061260624,\"south\": 33.907272463768116,\"west\": -118.06906938739377},{\"name\": \"Seattle\",\"ID\": \"SEA0\",\"centerLat\": 47.6062,\"centerLon\": -122.3321,\"north\": 47.751127536231884,\"east\": -122.54669728390833,\"south\": 47.46127246376812,\"west\": -122.11750271609168}]";
+        JSONParser parser = new JSONParser();
 
         // Parse tweet JSON
-        JSONParser parser = new JSONParser();
         Object obj = null;
         try {
             obj = parser.parse(data);
@@ -92,35 +101,63 @@ public class SortBolt extends BaseBasicBolt {
                 }
             }
         }
-        
 
+        // Alright, now sort it given our list of regions.
         if(coordObj != null) {
             JSONArray coordArray = (JSONArray) coordObj.get("coordinates");
             tweetLoc.latitude = this.jsonToDouble(coordArray, 0);
             tweetLoc.longitude =  this.jsonToDouble(coordArray, 1);
         }
 
-        // Alright, now sort it given our list of regions.
-        // Parse JSON, get JSON array
-        Object regionObj = null;
         try {
-            regionObj = parser.parse(locationJSON);
-        } catch (ParseException e) {
+            JSONArray locationObj = this.getRegions();
+            JSONObject region = coordsToRegion(tweetLoc, locationObj);
+
+            if(region == null) return; // Don't emit, tweet doesn't belong in a region
+
+            LOG.info("SortBolt got tweet: from region " + region.get("ID") + " with id " + tweetID);
+            collector.emit(new Values(region.get("ID"), tweetFullText, tweetID, region, sensitivity));
+        } catch (Exception e) {
             e.printStackTrace();
         }
-
-        JSONArray locationObj = (JSONArray) regionObj;
-        JSONObject region = coordsToRegion(tweetLoc, locationObj);
-
-        if(region == null) return; // Don't emit, tweet doesn't belong in a region
-
-        LOG.info("SortBolt got tweet: from region " + region.get("ID") + " with id " + tweetID);
-        collector.emit(new Values(region.get("ID"), tweetFullText, tweetID, region, sensitivity));
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declare(new Fields("regionID", "tweetText", "tweetID", "regionJSON", "possiblySensitive"));
+    }
+
+    private JSONArray getRegions() throws MalformedURLException, IOException  {
+        // See if two minutes have passed
+        if(this.timestamp.before(new Timestamp(System.currentTimeMillis()))) {
+            // Sorry for this next line
+            InputStream is = new URL(this.locationEndpoint + "/locations").openStream();
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
+            String locationJSON = readAll(rd);
+
+            // Parse JSON, get JSON array
+            Object regionObj = null;
+            JSONParser parser = new JSONParser();
+            try {
+                regionObj = parser.parse(locationJSON);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            this.regions = (JSONArray) regionObj;
+
+            this.timestamp = new Timestamp(System.currentTimeMillis() + 120000);
+        }
+
+        return this.regions;
+    }
+
+    private static String readAll(Reader rd) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        int cp;
+        while ((cp = rd.read()) != -1) {
+            sb.append((char) cp);
+        }
+        return sb.toString();
     }
 
     private Double jsonToDouble(JSONArray arr, int loc) {

@@ -6,10 +6,14 @@ import java.util.Properties;
 import java.util.UUID;
 
 import org.apache.storm.generated.AuthorizationException;
+import org.apache.storm.generated.Bolt;
 import org.apache.storm.kafka.BrokerHosts;
 import org.apache.storm.kafka.KafkaSpout;
 import org.apache.storm.kafka.SpoutConfig;
 import org.apache.storm.kafka.ZkHosts;
+import org.apache.storm.topology.BoltDeclarer;
+import org.apache.storm.topology.base.BaseWindowedBolt;
+import org.apache.storm.tuple.Fields;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +29,7 @@ import org.apache.storm.topology.TopologyBuilder;
 public class BothTopology {
     private static final Logger LOG = LoggerFactory.getLogger(BothTopology.class);
     private static String zookeeperEndpoint;
+    private static String webserverEndpoint;
     private static String zookeeperPrefix;
 
     public static void main(String[] args) throws IllegalArgumentException, KeeperException, InterruptedException,
@@ -50,39 +55,30 @@ public class BothTopology {
         spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
 
         rawBuilder.setSpout("raw_spout", new KafkaSpout(spoutConfig));
-        rawBuilder.setBolt("sorting_bolt", new SortBolt(), 20).setNumTasks(20).shuffleGrouping("raw_spout");
-        rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 20).shuffleGrouping("sorting_bolt");
-        rawBuilder.setBolt("region_bolt", new KafkaRegionBolt(), 10).shuffleGrouping("sentiment_bolt");
+        rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 10).setNumTasks(20).shuffleGrouping("raw_spout");
+        rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 2).shuffleGrouping("sorting_bolt");
+        //rawBuilder.setBolt("region_bolt", new KafkaRegionBolt(), 10).shuffleGrouping("sentiment_bolt");
         // sentiment_bolt -> kafka (USE REGION FOR TOPIC)
 
-        // TOPOLOGY SPLIT
-        // kafka regions -> averagebolt w/ direct grouping (will need #num region spouts)
-//        aveBuilder.setBolt("average_bolt",
-//                new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
-//                        BaseWindowedBolt.Duration.minutes(2)),
-        //aveBuilder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
-        // Annnd weather bolt already outputs to kafka! Yay!
 
+        rawBuilder.setBolt("average_bolt", new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
+                        BaseWindowedBolt.Duration.minutes(2)), 100)
+                            .fieldsGrouping("sentiment_bolt", new Fields("regionID"));
+
+        rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 1).shuffleGrouping("average_bolt").setMemoryLoad(768.0);
+
+        // Annnd weather bolt already outputs to kafka! Yay!
         Config rawConf = new Config();
         rawConf.setFallBackOnJavaSerialization(true);
         rawConf.setDebug(true);                 
         rawConf.setNumEventLoggers(5);          // Arbritrary
-        rawConf.setNumWorkers(10);              // ^
+        rawConf.setNumWorkers(20);              // ^
+        rawConf.setMessageTimeoutSecs(1200000); // 20 mins
         rawConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
         rawConf.setMaxSpoutPending(5000);
 
-        Config aveConf = new Config();
-        aveConf.setFallBackOnJavaSerialization(true);
-        aveConf.setDebug(true);                 
-        aveConf.setNumEventLoggers(5);          // Arbritrary
-        aveConf.setNumWorkers(10);              // ^
-        aveConf.setMessageTimeoutSecs(1200000); // 20 mins
-        aveConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
-        aveConf.setMaxSpoutPending(5000);
-
         try {
-            StormSubmitter.submitTopology("sorting-topology", rawConf, rawBuilder.createTopology());
-            //StormSubmitter.submitTopology("average-topology", aveConf, aveBuilder.createTopology());
+            StormSubmitter.submitTopology("perfect-topology", rawConf, rawBuilder.createTopology());
         } catch (AuthorizationException e) {
             e.printStackTrace();
         }
@@ -108,6 +104,12 @@ public class BothTopology {
             zookeeperPrefix = zookeeperPrefixOverride;
         }
         LOG.info("Using zookeeper prefix " + zookeeperPrefix);
+
+        String webserverEndpointOverride = properties.getProperty("webserverEndpoint");
+        if (webserverEndpointOverride != null) {
+            webserverEndpoint = webserverEndpointOverride;
+        }
+        LOG.info("Using webserver endpoint " + webserverEndpoint);
 
     }
 
