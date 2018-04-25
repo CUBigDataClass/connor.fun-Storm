@@ -14,7 +14,7 @@ public class SentimentBolt extends ShellBolt implements IRichBolt {
     private static final Logger LOG = LoggerFactory.getLogger(SentimentBolt.class);
 
     public SentimentBolt() {
-        super("python3", "sentiment.py");
+        super("python3", "SentimentBolt.py");
     }
 
     @Override
