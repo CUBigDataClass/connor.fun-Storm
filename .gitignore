@@ -2,3 +2,4 @@ target/
 logs/
 .idea/
 repo/
+multilang/resources/modelv01.pickle
