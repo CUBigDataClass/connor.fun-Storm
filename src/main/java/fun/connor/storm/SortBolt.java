@@ -1,7 +1,6 @@
 package fun.connor.storm;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -23,7 +22,6 @@ import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Tuple;
-import sun.reflect.annotation.ExceptionProxy;
 
 public class SortBolt extends BaseBasicBolt {
     private static final long serialVersionUID = 177788290277634253L;

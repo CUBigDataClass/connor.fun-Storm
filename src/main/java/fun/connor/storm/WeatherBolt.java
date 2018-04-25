@@ -9,20 +9,18 @@ import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseBasicBolt;
-import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
-import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Properties;
 
 public class WeatherBolt extends BaseBasicBolt {
+    private static final long serialVersionUID = 177717644989633253L;
     private static final Logger LOG = LoggerFactory.getLogger(WeatherBolt.class);
     private KafkaProducer<String, String> kafkaProducer;
 

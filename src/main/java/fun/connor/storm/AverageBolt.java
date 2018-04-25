@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class AverageBolt extends BaseWindowedBolt {
+    private static final long serialVersionUID = 177788294989633253L;
     private final Logger LOG = LoggerFactory.getLogger(AverageBolt.class);
     private OutputCollector collector;
 

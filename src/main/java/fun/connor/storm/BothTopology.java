@@ -6,14 +6,11 @@ import java.util.Properties;
 import java.util.UUID;
 
 import org.apache.storm.generated.AuthorizationException;
-import org.apache.storm.generated.Bolt;
 import org.apache.storm.kafka.BrokerHosts;
 import org.apache.storm.kafka.KafkaSpout;
 import org.apache.storm.kafka.SpoutConfig;
 import org.apache.storm.kafka.ZkHosts;
-import org.apache.storm.topology.BoltDeclarer;
 import org.apache.storm.topology.base.BaseWindowedBolt;
-import org.apache.storm.tuple.Fields;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
