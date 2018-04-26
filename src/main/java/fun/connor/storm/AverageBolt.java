@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class AverageBolt extends BaseWindowedBolt {
+    private static final long serialVersionUID = 177788294989633253L;
     private final Logger LOG = LoggerFactory.getLogger(AverageBolt.class);
     private OutputCollector collector;
 
@@ -55,6 +56,7 @@ public class AverageBolt extends BaseWindowedBolt {
 
             float avgSentiment = sumSentiment / tuplesInWindow.size();
 
+
             // Find average tweet
             for (Tuple tuple : tuplesInWindow){
                 Double sentDiff =  Math.abs(avgSentiment - (Double)tuple.getValue(1));
@@ -68,8 +70,8 @@ public class AverageBolt extends BaseWindowedBolt {
             LOG.info("AverageBolt got indicative tweet " + avgTweetID + " with sentiment " + avgTweetSent);
             collector.emit(new Values(regionID, avgSentiment, avgTweetID, regionJSON));
             // Output the data: region average, region ID, and typical tweet for the window.
-            LOG.info("AverageBolt got region: regionID=" + tuplesInWindow.get(0).getValue(0)
-                    + " with average sentiment of " + avgSentiment);
+            //LOG.info("AverageBolt got region: regionID=" + tuplesInWindow.get(0).getValue(0)
+            //        + " with average sentiment of " + avgSentiment);
         }
     }
 
