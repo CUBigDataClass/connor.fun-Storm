@@ -24,7 +24,7 @@ public class RegionGrouping implements CustomStreamGrouping {
         // Just don't have a regionID greater than len(targetTasks). Just don't do it.
         Integer taskInt = taskList[Integer.parseInt((String) values.get(0))];
 
-        LOG.info("RegionGrouping got values of: " + values.get(0) + " with taskInt of " + taskInt);
+        //LOG.info("RegionGrouping got values of: " + values.get(0) + " with taskInt of " + taskInt);
 
         List<Integer> taskSingle = new ArrayList<Integer>();
         taskSingle.add(taskInt);

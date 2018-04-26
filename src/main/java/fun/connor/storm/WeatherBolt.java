@@ -63,7 +63,7 @@ public class WeatherBolt extends BaseBasicBolt {
                 BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
                 String weatherJSON = readAll(rd);
 
-                LOG.info("WeatherBolt got region: regionID=" + regionID + " with average sentiment of " + avgSentiment + " and weather of " + weatherJSON);
+                //LOG.info("WeatherBolt got region: regionID=" + regionID + " with average sentiment of " + avgSentiment + " and weather of " + weatherJSON);
 
                 // doesn't block! tnx kpl, hope this works
                 this.kafkaProducer.send(new ProducerRecord<String, String>("test", regionID, this.formatOutput(regionID, avgSentiment, tweetID, regionJSON, weatherJSON)));

@@ -32,7 +32,7 @@ class GrantModel():
         feats = self.extract_features(newTweet)
         feat_vec = self.vectorizer.transform(feats)
         
-        return self.sentiment.predict(feat_vec)[0]
+        return self.sentiment.decision_function(feat_vec)[0]
 
 class SentimentBolt(storm.BasicBolt):
     def initialize(self, conf, context):
@@ -43,7 +43,7 @@ class SentimentBolt(storm.BasicBolt):
         text = tup.values[1]
         score = self.model.predict(text)
         
-        storm.logInfo("SentimentBolt got: " + str(score) + " for text " + text)
+        #storm.logInfo("SentimentBolt got: " + str(score) + " for text " + text)
 
         tup.values[1] = score
         storm.emit(tup.values)

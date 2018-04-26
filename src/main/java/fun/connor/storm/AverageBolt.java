@@ -59,11 +59,11 @@ public class AverageBolt extends BaseWindowedBolt {
             }
 
             float avgSentiment = sumSentiment / tuplesInWindow.size();
-            LOG.info("AverageBolt got indicative tweet " + avgTweetID + " with sentiment " + avgTweetSent);
+            //LOG.info("AverageBolt got indicative tweet " + avgTweetID + " with sentiment " + avgTweetSent);
             collector.emit(new Values(regionID, avgSentiment, avgTweetID, regionJSON));
             // Output the data: region average, region ID, and typical tweet for the window.
-            LOG.info("AverageBolt got region: regionID=" + tuplesInWindow.get(0).getValue(0)
-                    + " with average sentiment of " + avgSentiment);
+            //LOG.info("AverageBolt got region: regionID=" + tuplesInWindow.get(0).getValue(0)
+            //        + " with average sentiment of " + avgSentiment);
         }
     }
 

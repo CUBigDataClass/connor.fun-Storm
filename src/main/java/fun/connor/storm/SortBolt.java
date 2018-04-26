@@ -113,7 +113,7 @@ public class SortBolt extends BaseBasicBolt {
 
             if(region == null) return; // Don't emit, tweet doesn't belong in a region
 
-            LOG.info("SortBolt got tweet: from region " + region.get("ID") + " with id " + tweetID);
+            //LOG.info("SortBolt got tweet: from region " + region.get("ID") + " with id " + tweetID);
             collector.emit(new Values(region.get("ID"), tweetFullText, tweetID, region, sensitivity));
         } catch (Exception e) {
             e.printStackTrace();
@@ -144,7 +144,7 @@ public class SortBolt extends BaseBasicBolt {
                 e.printStackTrace();
             }
 
-            LOG.info("SortBolt got Region: " + regionObj.toString());
+            //LOG.info("SortBolt got Region: " + regionObj.toString());
 
             this.regions = (JSONArray) regionObj;
             this.timestamp = new Timestamp(System.currentTimeMillis() + 120000);

@@ -59,9 +59,9 @@ public class BothTopology {
     spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
     rawBuilder.setSpout("raw_spout2", new KafkaSpout(spoutConfig));
 
-    rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 5)
+    rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 2)
         .shuffleGrouping("raw_spout1").shuffleGrouping("raw_spout2");
-    rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 75)
+    rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 16)
         .shuffleGrouping("sorting_bolt");
 
     rawBuilder
@@ -69,7 +69,7 @@ public class BothTopology {
             "average_bolt",
             new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
                                          BaseWindowedBolt.Duration.minutes(2)),
-            600)
+            4)
         .customGrouping("sentiment_bolt", new RegionGrouping());
     rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 2)
         .shuffleGrouping("average_bolt")
@@ -77,7 +77,7 @@ public class BothTopology {
 
     Config rawConf = new Config();
     rawConf.setFallBackOnJavaSerialization(true);
-    rawConf.setDebug(true);
+    rawConf.setDebug(false);
     rawConf.setNumEventLoggers(1);       // Arbritrary
     rawConf.setNumWorkers(20);           // ^
     rawConf.setMessageTimeoutSecs(1400); // 22 mins
