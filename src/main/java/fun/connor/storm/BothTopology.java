@@ -11,6 +11,7 @@ import org.apache.storm.kafka.KafkaSpout;
 import org.apache.storm.kafka.SpoutConfig;
 import org.apache.storm.kafka.ZkHosts;
 import org.apache.storm.topology.base.BaseWindowedBolt;
+import org.apache.storm.tuple.Fields;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +60,7 @@ public class BothTopology {
     spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
     rawBuilder.setSpout("raw_spout2", new KafkaSpout(spoutConfig));
 
-    rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 2)
+    rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 8)
         .shuffleGrouping("raw_spout1").shuffleGrouping("raw_spout2");
     rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 16)
         .shuffleGrouping("sorting_bolt");
@@ -69,8 +70,8 @@ public class BothTopology {
             "average_bolt",
             new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
                                          BaseWindowedBolt.Duration.minutes(2)),
-            4)
-        .customGrouping("sentiment_bolt", new RegionGrouping());
+            1)
+        .fieldsGrouping("sentiment_bolt", new Fields("regionID"));
     rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 2)
         .shuffleGrouping("average_bolt")
         .setMemoryLoad(768.0);

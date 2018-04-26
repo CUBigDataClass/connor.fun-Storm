@@ -54,7 +54,7 @@ public class WeatherBolt extends BaseBasicBolt {
                 lon, lat, key);
 
         String regionID = (String) input.getValue(0);
-        Float avgSentiment = (Float) input.getValue(1);
+        Double avgSentiment = (Double) input.getValue(1);
         String tweetID = (String) input.getValue(2);
 
         try {
@@ -78,7 +78,7 @@ public class WeatherBolt extends BaseBasicBolt {
         }
     }
 
-    private String formatOutput(String regionID, Float avgSentiment, String tweetID, JSONObject regionJSON, String weatherJSON) {
+    private String formatOutput(String regionID, Double avgSentiment, String tweetID, JSONObject regionJSON, String weatherJSON) {
         // Parse regionJSON and weatherJSON so they become sub-objects
         Object weatherRaw = null;
         JSONParser parser = new JSONParser();

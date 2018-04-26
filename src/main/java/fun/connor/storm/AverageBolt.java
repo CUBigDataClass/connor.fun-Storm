@@ -2,6 +2,7 @@ package fun.connor.storm;
 
 import java.util.List;
 import java.util.Map;
+import java.io.Serializable;
 import java.lang.Math;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +18,9 @@ import org.apache.storm.windowing.TupleWindow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RegionData{
+class RegionData implements Serializable {
+    private static final long serialVersionUID = 177788294969833253L;
+    private final Logger LOG = LoggerFactory.getLogger(RegionData.class);    
     private List<String> tweetIDList;
     private List<Double> tweetSentimentList;
     private String avgTweetID;
@@ -27,12 +30,8 @@ class RegionData{
     private Object regionJSON;
     private List<Boolean> tweetSensitvityList;
     private String regionID;
-    private final Logger LOG;
-
-
     
-    public RegionData(Object regionJSON, String regionID, Logger logger){
-        
+    public RegionData(Object regionJSON, String regionID){
         this.tweetIDList = new ArrayList<String>();
         this.tweetSentimentList = new ArrayList<Double>();
         this.tweetSensitvityList = new ArrayList<Boolean>();
@@ -40,13 +39,11 @@ class RegionData{
         this.counter = 0;
         this.regionJSON = regionJSON;
         this.regionID = regionID;
-        this.LOG = logger;
-
     }
 
     // Add a tweet to region data
     public void addTweet(String tweetID, Double tweetSentiment, Boolean sensitivity){
-        this.LOG.info("Adding tweet to region "+ this.regionID);
+        //this.LOG.info("Adding tweet to region "+ this.regionID);
         
         this.tweetIDList.add(tweetID);
         this.tweetSentimentList.add(tweetSentiment);
@@ -128,7 +125,7 @@ public class AverageBolt extends BaseWindowedBolt {
                     map.replace(regionID, structure);
                 }
                 else{
-                    structure = new RegionData(tuple.getValue(3), regionID, LOG);
+                    structure = new RegionData(tuple.getValue(3), regionID);
                     structure.addTweet((String)tuple.getValue(2), (Double)tuple.getValue(1), (Boolean)tuple.getValue(4));
                     map.put(regionID, structure);      
                     LOG.info("Created new structure with regionID: "+regionID);
