@@ -2,6 +2,7 @@ package fun.connor.storm;
 
 import java.util.List;
 import java.util.Map;
+import java.lang.Math;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -49,17 +50,24 @@ public class AverageBolt extends BaseWindowedBolt {
                             + regionID + ", has ID " + tuple.getValue(0));
                 } else { // include in average?
                     sumSentiment += (Double) tuple.getValue(1);
-                    tempAverage = sumSentiment / counter;
-                    if (((Double) tuple.getValue(1) - tempAverage) < 0.001) {
-                        avgTweetID = (String) tuple.getValue(2);
-                        avgTweetSent = (Double) tuple.getValue(1);
-                    }
                     counter++;
                 }
             }
 
             float avgSentiment = sumSentiment / tuplesInWindow.size();
-            //LOG.info("AverageBolt got indicative tweet " + avgTweetID + " with sentiment " + avgTweetSent);
+
+
+            // Find average tweet
+            for (Tuple tuple : tuplesInWindow){
+                float sentDiff =  abs(avgSentiment - (Double)tuple.getValue(1));
+                Boolean sensitivity = (Boolean) tuple.getValue(4);
+                if ((sentDiff < abs(avgSentiment - avgTweetSent)&&!sensitivity){
+                    avgTweetSent = (Double) tuple.getValue(1);
+                    avgTweetID = (String) tuple.getValue(2);
+                }
+            }
+
+            LOG.info("AverageBolt got indicative tweet " + avgTweetID + " with sentiment " + avgTweetSent);
             collector.emit(new Values(regionID, avgSentiment, avgTweetID, regionJSON));
             // Output the data: region average, region ID, and typical tweet for the window.
             //LOG.info("AverageBolt got region: regionID=" + tuplesInWindow.get(0).getValue(0)
