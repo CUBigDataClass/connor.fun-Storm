@@ -22,30 +22,38 @@ class GrantModel():
         feats['NUMCAPS'] = 0
         for j in range(len(tweet)):
             word = tweet[j]
-
             if len(word) > 0 and word[0] != '@':
                 feats['WORD='+word.lower()] = 1
                 feats['NUMCAPS'] += sum(1 for char in word if char.isupper())
         return feats
     
-    def predict(self, newTweet):
-        feats = self.extract_features(newTweet)
+    def predict(self, newTweetTexts):
+        feats = []
+        for text in newTweetTexts:
+            feats.append(self.extract_features(text))
+            
         feat_vec = self.vectorizer.transform(feats)
         
-        return self.sentiment.decision_function(feat_vec)[0]
+        return self.sentiment.decision_function(feat_vec)
 
 class SentimentBolt(storm.BasicBolt):
     def initialize(self, conf, context):
+        self.tweets = []
         with open(MODEL_NAME,'rb') as f:
             self.model = pickle.load(f)
 
     def process(self, tup):
-        text = tup.values[1]
-        score = self.model.predict(text)
-        
-        #storm.logInfo("SentimentBolt got: " + str(score) + " for text " + text)
+        self.tweets.append(tup)
 
-        tup.values[1] = score
-        storm.emit(tup.values)
+        if len(self.tweets) > 50:
+        
+            texts = [tweet.values[1] for tweet in self.tweets]
+            scores = self.model.predict(texts)
+        
+            for ii, score in enumerate(scores):
+                self.tweets[ii].values[1] = score
+                storm.emit(self.tweets[ii].values)
+
+            self.tweets = []
 
 SentimentBolt().run()
