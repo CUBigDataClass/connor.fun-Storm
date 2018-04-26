@@ -27,8 +27,11 @@ class RegionData{
     private Object regionJSON;
     private List<Boolean> tweetSensitvityList;
     private String regionID;
+    private final Logger LOG;
+
+
     
-    public RegionData(Object regionJSON, String regionID){
+    public RegionData(Object regionJSON, String regionID, Logger logger){
         
         this.tweetIDList = new ArrayList<String>();
         this.tweetSentimentList = new ArrayList<Double>();
@@ -37,11 +40,14 @@ class RegionData{
         this.counter = 0;
         this.regionJSON = regionJSON;
         this.regionID = regionID;
+        this.LOG = logger;
 
     }
 
     // Add a tweet to region data
     public void addTweet(String tweetID, Double tweetSentiment, Boolean sensitivity){
+        this.LOG.info("Adding tweet to region "+ this.regionID);
+        
         this.tweetIDList.add(tweetID);
         this.tweetSentimentList.add(tweetSentiment);
         this.tweetSensitvityList.add(sensitivity);
@@ -81,8 +87,8 @@ class RegionData{
                 }
             }
         }
-
-        return new ArrayList<String>(closestTweets.values());        
+        this.LOG.info("Returning ArrayList of size "+closestTweets.size());
+        return new ArrayList<String>(closestTweets.values());
     }
     public void emitValues(OutputCollector collector, int numTweets){
         Double avgSentiment = this.getAvgSent();
@@ -122,9 +128,10 @@ public class AverageBolt extends BaseWindowedBolt {
                     map.replace(regionID, structure);
                 }
                 else{
-                    structure = new RegionData(tuple.getValue(3), regionID);
+                    structure = new RegionData(tuple.getValue(3), regionID, LOG);
                     structure.addTweet((String)tuple.getValue(2), (Double)tuple.getValue(1), (Boolean)tuple.getValue(4));
-                    map.put(regionID, structure);                    
+                    map.put(regionID, structure);      
+                    LOG.info("Created new structure with regionID: "+regionID);
                 }
             }
 
