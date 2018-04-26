@@ -3,6 +3,8 @@ package fun.connor.storm;
 import java.util.List;
 import java.util.Map;
 import java.lang.Math;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -14,6 +16,84 @@ import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+class RegionData{
+    private List<String> tweetIDList;
+    private List<Double> tweetSentimentList;
+    private String avgTweetID;
+    private Double avgTweetSent;
+    private Double sumSentiment;
+    private int counter;
+    private Object regionJSON;
+    private List<Boolean> tweetSensitvityList;
+    private String regionID;
+    
+    public RegionData(Object regionJSON, String regionID){
+        
+        this.tweetIDList = new ArrayList<String>();
+        this.tweetSentimentList = new ArrayList<Double>();
+        this.tweetSensitvityList = new ArrayList<Boolean>();
+        this.sumSentiment = 0.;
+        this.counter = 0;
+        this.regionJSON = regionJSON;
+        this.regionID = regionID;
+
+    }
+
+    // Add a tweet to region data
+    public void addTweet(String tweetID, Double tweetSentiment, Boolean sensitivity){
+        this.tweetIDList.add(tweetID);
+        this.tweetSentimentList.add(tweetSentiment);
+        this.tweetSensitvityList.add(sensitivity);
+        this.sumSentiment += tweetSentiment;
+        this.counter++;
+    }
+    
+    public Double getAvgSent(){
+        return this.sumSentiment/this.counter;
+    }
+
+    // Return arraylist of tweetIDs with sensitivity close to average
+    public ArrayList<String> getAvgTweets(int numTweets){
+        Double avgSent = this.getAvgSent();
+        int size = this.tweetIDList.size();
+        HashMap<Double,String> closestTweets = new HashMap<Double, String>();
+        String tweetID;
+        Double tweetSent;
+        Boolean tweetSens;
+        Double sentDiff;
+
+    
+        for (int i = 0; i<size; i++){
+            tweetID = this.tweetIDList.get(i);
+            tweetSent = this.tweetSentimentList.get(i);
+            tweetSens = this.tweetSensitvityList.get(i);
+            sentDiff = Math.abs(tweetSent-avgSent);
+            if (!tweetSens){
+                if (closestTweets.size() < numTweets){
+                    closestTweets.put(sentDiff, tweetID);
+                }
+                for (Double mapVal: closestTweets.keySet()){
+                    if (sentDiff < mapVal){
+                        closestTweets.remove(mapVal);
+                        closestTweets.put(sentDiff, tweetID);
+                    }
+                }
+            }
+        }
+
+        return new ArrayList<String>(closestTweets.values());        
+    }
+    public void emitValues(OutputCollector collector, int numTweets){
+        Double avgSentiment = this.getAvgSent();
+        ArrayList<String> avgTweetIDs = this.getAvgTweets(numTweets);
+        // For now: Keep emitting one value
+        String avgTweetID = avgTweetIDs.get(0);
+
+        collector.emit(new Values(this.regionID, avgSentiment, avgTweetID, this.regionJSON));        
+    }
+}
+
 
 public class AverageBolt extends BaseWindowedBolt {
     private static final long serialVersionUID = 177788294989633253L;
@@ -27,51 +107,34 @@ public class AverageBolt extends BaseWindowedBolt {
 
     @Override
     public void execute(TupleWindow inputWindow) {
-        
+        // Map the regionID to data
+        HashMap<String, RegionData> map = new HashMap<String, RegionData>();
+
         List<Tuple> tuplesInWindow = inputWindow.get();
         if (tuplesInWindow.size() > 0) {
-            // Keep track of an average
-            float sumSentiment = 0;
-            int counter = 0;
-            float tempAverage = 0;
-
-            String regionID = (String) tuplesInWindow.get(0).getValue(0);
-            String avgTweetID = (String) tuplesInWindow.get(0).getValue(2);
-            Object regionJSON = tuplesInWindow.get(0).getValue(3);
-            Double avgTweetSent = (Double) tuplesInWindow.get(0).getValue(1);
+            RegionData structure;
 
             for (Tuple tuple : tuplesInWindow) {
-
-                // Get fields and pull out sentiment
-                // Add sentiment to sum
-                // Log if tweet doesn't have the correct region ID
-                if (!tuple.getValue(0).equals(regionID)) {
-                    LOG.info("Tweet with ID " + tuple.getValue(2) + " does not correspond with expected region "
-                            + regionID + ", has ID " + tuple.getValue(0));
-                } else { // include in average?
-                    sumSentiment += (Double) tuple.getValue(1);
-                    counter++;
+                String regionID = (String)tuple.getValue(0);
+                if (map.containsKey(regionID)){
+                    structure = map.get(regionID);
+                    structure.addTweet((String)tuple.getValue(2), (Double)tuple.getValue(1), (Boolean)tuple.getValue(4));
+                    map.replace(regionID, structure);
+                }
+                else{
+                    structure = new RegionData(tuple.getValue(3), regionID);
+                    structure.addTweet((String)tuple.getValue(2), (Double)tuple.getValue(1), (Boolean)tuple.getValue(4));
+                    map.put(regionID, structure);                    
                 }
             }
 
-            float avgSentiment = sumSentiment / tuplesInWindow.size();
-
-
-            // Find average tweet
-            for (Tuple tuple : tuplesInWindow){
-                Double sentDiff =  Math.abs(avgSentiment - (Double)tuple.getValue(1));
-                Boolean sensitivity = (Boolean) tuple.getValue(4);
-                if ((sentDiff < Math.abs(avgSentiment - avgTweetSent))&&!sensitivity){
-                    avgTweetSent = (Double) tuple.getValue(1);
-                    avgTweetID = (String) tuple.getValue(2);
-                }
+            // Emit each regionID
+            for (String mapKey: map.keySet()){
+                structure = map.get(mapKey);
+                // Change number to change number of tweets emitted.
+                structure.emitValues(collector, 1);
             }
 
-            LOG.info("AverageBolt got indicative tweet " + avgTweetID + " with sentiment " + avgTweetSent);
-            collector.emit(new Values(regionID, avgSentiment, avgTweetID, regionJSON));
-            // Output the data: region average, region ID, and typical tweet for the window.
-            //LOG.info("AverageBolt got region: regionID=" + tuplesInWindow.get(0).getValue(0)
-            //        + " with average sentiment of " + avgSentiment);
         }
     }
 
