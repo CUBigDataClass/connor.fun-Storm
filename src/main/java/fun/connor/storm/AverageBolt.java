@@ -57,9 +57,9 @@ public class AverageBolt extends BaseWindowedBolt {
 
             // Find average tweet
             for (Tuple tuple : tuplesInWindow){
-                float sentDiff =  abs(avgSentiment - (Double)tuple.getValue(1));
+                Double sentDiff =  Math.abs(avgSentiment - (Double)tuple.getValue(1));
                 Boolean sensitivity = (Boolean) tuple.getValue(4);
-                if ((sentDiff < abs(avgSentiment - avgTweetSent)&&!sensitivity){
+                if ((sentDiff < Math.abs(avgSentiment - avgTweetSent))&&!sensitivity){
                     avgTweetSent = (Double) tuple.getValue(1);
                     avgTweetID = (String) tuple.getValue(2);
                 }
