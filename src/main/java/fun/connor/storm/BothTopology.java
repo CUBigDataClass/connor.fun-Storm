@@ -45,17 +45,23 @@ public class BothTopology {
 
     TopologyBuilder rawBuilder = new TopologyBuilder();
 
-    String topicName = "raw-tweets";
+    String topicName = "raw-tweets-USA0";
     BrokerHosts hosts = new ZkHosts(
         zookeeperEndpoint, "/brokers"); // Assumes Kafka broker uses same zk
     SpoutConfig spoutConfig = new SpoutConfig(
         hosts, topicName, "/" + zookeeperPrefix, UUID.randomUUID().toString());
     spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
-    rawBuilder.setSpout("raw_spout", new KafkaSpout(spoutConfig));
+    rawBuilder.setSpout("raw_spout1", new KafkaSpout(spoutConfig));
+
+    topicName = "raw-tweets-USA1";
+    spoutConfig = new SpoutConfig(
+        hosts, topicName, "/" + zookeeperPrefix, UUID.randomUUID().toString());
+    spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
+    rawBuilder.setSpout("raw_spout2", new KafkaSpout(spoutConfig));
 
     rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 5)
-        .shuffleGrouping("raw_spout");
-    rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 50)
+        .shuffleGrouping("raw_spout1").shuffleGrouping("raw_spout2");
+    rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 75)
         .shuffleGrouping("sorting_bolt");
 
     rawBuilder
@@ -63,7 +69,7 @@ public class BothTopology {
             "average_bolt",
             new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
                                          BaseWindowedBolt.Duration.minutes(2)),
-            100)
+            600)
         .customGrouping("sentiment_bolt", new RegionGrouping());
     rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 2)
         .shuffleGrouping("average_bolt")
@@ -72,12 +78,18 @@ public class BothTopology {
     Config rawConf = new Config();
     rawConf.setFallBackOnJavaSerialization(true);
     rawConf.setDebug(true);
-    rawConf.setNumEventLoggers(5);       // Arbritrary
+    rawConf.setNumEventLoggers(1);       // Arbritrary
     rawConf.setNumWorkers(20);           // ^
     rawConf.setMessageTimeoutSecs(1400); // 22 mins
-    rawConf.registerEventLogger(
-        org.apache.storm.metric.FileBasedEventLogger.class);
+    rawConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
     rawConf.setMaxSpoutPending(5000);
+
+    // I have no idea how to fix the spout lag problem - the bottleneck is nowhere I can see.
+    // rawConf.put("topology.producer.batch.size", 262144);
+    // rawConf.put("topology.transfer.buffer.size", 262144);
+    // rawConf.put("topology.executor.receive.buffer.size", 262144);
+    // rawConf.put("topology.worker.max.heap.size.mb", 2000);
+    // rawConf.put("topology.sleep.spout.wait.strategy.time.ms", 0);
 
     try {
       StormSubmitter.submitTopology("the-topology", rawConf,

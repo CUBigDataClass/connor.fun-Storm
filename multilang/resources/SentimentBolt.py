@@ -32,7 +32,7 @@ class GrantModel():
         feats = self.extract_features(newTweet)
         feat_vec = self.vectorizer.transform(feats)
         
-        return self.sentiment.decision_function(feat_vec)[0]
+        return self.sentiment.predict(feat_vec)[0]
 
 class SentimentBolt(storm.BasicBolt):
     def initialize(self, conf, context):

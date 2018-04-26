@@ -18,7 +18,6 @@ public class RegionGrouping implements CustomStreamGrouping {
     public void prepare(WorkerTopologyContext context, GlobalStreamId stream, List<Integer> targetTasks) {
         this.taskList = new Integer[targetTasks.size()];
         for(int i = 0; i < targetTasks.size(); i++) taskList[i] = targetTasks.get(i);
-    
     }
 
     public List<Integer> chooseTasks(int taskId, List<Object> values) {
@@ -30,6 +29,6 @@ public class RegionGrouping implements CustomStreamGrouping {
         List<Integer> taskSingle = new ArrayList<Integer>();
         taskSingle.add(taskInt);
 
-        return taskSingle; // What a garbage line
+        return taskSingle; // What a garbage lineo
     }
 }
