@@ -2,3 +2,10 @@ target/
 logs/
 .idea/
 repo/
+.classpath
+.project
+.vscode/
+.settings/
+dependency-reduced-pom.xml
+storm.iml
+multilang/resources/modelv01.pickle

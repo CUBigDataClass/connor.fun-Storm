@@ -1,7 +1,6 @@
 package fun.connor.storm;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -23,7 +22,6 @@ import org.apache.storm.topology.BasicOutputCollector;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Tuple;
-import sun.reflect.annotation.ExceptionProxy;
 
 public class SortBolt extends BaseBasicBolt {
     private static final long serialVersionUID = 177788290277634253L;
@@ -115,7 +113,7 @@ public class SortBolt extends BaseBasicBolt {
 
             if(region == null) return; // Don't emit, tweet doesn't belong in a region
 
-            LOG.info("SortBolt got tweet: from region " + region.get("ID") + " with id " + tweetID);
+            //LOG.info("SortBolt got tweet: from region " + region.get("ID") + " with id " + tweetID);
             collector.emit(new Values(region.get("ID"), tweetFullText, tweetID, region, sensitivity));
         } catch (Exception e) {
             e.printStackTrace();
@@ -146,7 +144,7 @@ public class SortBolt extends BaseBasicBolt {
                 e.printStackTrace();
             }
 
-            LOG.info("SortBolt got Region: " + regionObj.toString());
+            //LOG.info("SortBolt got Region: " + regionObj.toString());
 
             this.regions = (JSONArray) regionObj;
             this.timestamp = new Timestamp(System.currentTimeMillis() + 120000);
