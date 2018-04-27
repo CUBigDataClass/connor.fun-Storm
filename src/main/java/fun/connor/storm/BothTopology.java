@@ -60,9 +60,9 @@ public class BothTopology {
     spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
     rawBuilder.setSpout("raw_spout2", new KafkaSpout(spoutConfig));
 
-    rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 8)
+    rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 3)
         .shuffleGrouping("raw_spout1").shuffleGrouping("raw_spout2");
-    rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 16)
+    rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 40)
         .shuffleGrouping("sorting_bolt");
 
     rawBuilder
@@ -70,8 +70,8 @@ public class BothTopology {
             "average_bolt",
             new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
                                          BaseWindowedBolt.Duration.minutes(2)),
-            1)
-        .fieldsGrouping("sentiment_bolt", new Fields("regionID"));
+            10)
+        .fieldsGrouping("sentiment_bolt", new Fields("regionID")).setMemoryLoad(798.0);
     rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 2)
         .shuffleGrouping("average_bolt")
         .setMemoryLoad(768.0);
@@ -80,7 +80,7 @@ public class BothTopology {
     rawConf.setFallBackOnJavaSerialization(true);
     rawConf.setDebug(false);
     rawConf.setNumEventLoggers(1);       // Arbritrary
-    rawConf.setNumWorkers(20);           // ^
+    rawConf.setNumWorkers(40);           // ^
     rawConf.setMessageTimeoutSecs(1400); // 22 mins
     rawConf.registerEventLogger(org.apache.storm.metric.FileBasedEventLogger.class);
     rawConf.setMaxSpoutPending(5000);

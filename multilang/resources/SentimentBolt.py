@@ -45,7 +45,7 @@ class SentimentBolt(storm.BasicBolt):
     def process(self, tup):
         self.tweets.append(tup)
 
-        if len(self.tweets) > 50:
+        if len(self.tweets) > 100:
         
             texts = [tweet.values[1] for tweet in self.tweets]
             scores = self.model.predict(texts)
