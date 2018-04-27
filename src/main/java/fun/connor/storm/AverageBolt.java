@@ -53,7 +53,14 @@ class RegionData implements Serializable {
     }
     
     public Double getAvgSent(){
-        return this.sumSentiment/this.counter;
+        Double sent = this.sumSentiment/this.counter;
+        if (sent > 1){
+            sent = 1.;
+        }
+        if (sent < -1){
+            sent = -1.;
+        }
+        return sent;
     }
 
     // Return arraylist of tweetIDs with sensitivity close to average
@@ -91,9 +98,14 @@ class RegionData implements Serializable {
         Double avgSentiment = this.getAvgSent();
         ArrayList<String> avgTweetIDs = this.getAvgTweets(numTweets);
         // For now: Keep emitting one value
-        String avgTweetID = avgTweetIDs.get(0);
-
-        collector.emit(new Values(this.regionID, avgSentiment, avgTweetID, this.regionJSON));        
+        if (avgTweetIDs.size() > 0){
+            String avgTweetID = avgTweetIDs.get(0);
+            collector.emit(new Values(this.regionID, avgSentiment, avgTweetID, this.regionJSON));   
+        }
+        else{
+            this.LOG.info("ERROR: No unsensitive tweets found! Tweet IDS: "+this.tweetIDList + 
+                ", Sensitivity: "+this.tweetSensitvityList);
+        }     
     }
 }
 
