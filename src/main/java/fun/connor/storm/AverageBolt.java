@@ -62,12 +62,15 @@ class RegionData implements Serializable {
     public ArrayList<String> getAvgTweets(int numTweets){
         Double avgSent = this.getAvgSent();
         int size = this.tweetIDList.size();
+
+        // Maps difference from tweet sentiment to average sentiment -> TweetID
         HashMap<Double,String> closestTweets = new HashMap<Double, String>();
         String tweetID;
         Double tweetSent;
         Boolean tweetSens;
         Double sentDiff;
-
+        Double toRemove = null;
+        Double maxDiff= -1.;
     
         for (int i = 0; i<size; i++){
             tweetID = this.tweetIDList.get(i);
@@ -78,14 +81,26 @@ class RegionData implements Serializable {
                 if (closestTweets.size() < numTweets){
                     closestTweets.put(sentDiff, tweetID);
                 }
+                maxDiff = 0.;
+                
                 for (Double mapVal: closestTweets.keySet()){
-                    if (sentDiff < mapVal){
-                        closestTweets.remove(mapVal);
-                        closestTweets.put(sentDiff, tweetID);
+                    // Find value that's most different and replace it within the map
+                    if (sentDiff < mapVal && (mapVal-sentDiff)>maxDiff){
+                        toRemove = mapVal;
+                        maxDiff = mapVal-sentDiff;
+                        //toRemove.add(mapVal);
+                        //closestTweets.put(sentDiff, tweetID);
                     }
+                }
+
+                // To avoid concurrency error
+                if (toRemove != null){
+                    closestTweets.remove(toRemove);
+                    closestTweets.put(sentDiff, tweetID);
                 }
             }
         }
+        
         this.LOG.info("Returning ArrayList of size "+closestTweets.size());
         return new ArrayList<String>(closestTweets.values());
     }
@@ -142,7 +157,7 @@ public class AverageBolt extends BaseWindowedBolt {
             for (String mapKey: map.keySet()){
                 structure = map.get(mapKey);
                 // Change number to change number of tweets emitted.
-                structure.emitValues(collector, 1);
+                structure.emitValues(collector, 5);
             }
 
         }
