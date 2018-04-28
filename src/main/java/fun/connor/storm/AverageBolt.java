@@ -45,9 +45,9 @@ class RegionData implements Serializable {
     public void addTweet(String tweetID, Double tweetSentiment, Boolean sensitivity){
         //this.LOG.info("Adding tweet to region "+ this.regionID);
         
-        this.tweetIDList.add(tweetID);
-        this.tweetSentimentList.add(tweetSentiment);
-        this.tweetSensitvityList.add(sensitivity);
+        this.tweetIDList.add(new String(tweetID));
+        this.tweetSentimentList.add(new Double(tweetSentiment));
+        this.tweetSensitvityList.add(new Boolean(sensitivity));
         this.sumSentiment += tweetSentiment;
         this.counter++;
     }
@@ -104,6 +104,7 @@ class RegionData implements Serializable {
         this.LOG.info("Returning ArrayList of size "+closestTweets.size());
         return new ArrayList<String>(closestTweets.values());
     }
+
     public void emitValues(OutputCollector collector, int numTweets){
         Double avgSentiment = this.getAvgSent();
         ArrayList<String> avgTweetIDs = this.getAvgTweets(numTweets);
@@ -139,15 +140,15 @@ public class AverageBolt extends BaseWindowedBolt {
             RegionData structure;
 
             for (Tuple tuple : tuplesInWindow) {
-                String regionID = (String)tuple.getValue(0);
+                String regionID = new String(tuple.getString(0));
                 if (map.containsKey(regionID)){
                     structure = map.get(regionID);
-                    structure.addTweet((String)tuple.getValue(2), (Double)tuple.getValue(1), (Boolean)tuple.getValue(4));
+                    structure.addTweet(tuple.getString(2), tuple.getDouble(1), tuple.getBoolean(4));
                     map.replace(regionID, structure);
                 }
                 else{
                     structure = new RegionData(tuple.getValue(3), regionID);
-                    structure.addTweet((String)tuple.getValue(2), (Double)tuple.getValue(1), (Boolean)tuple.getValue(4));
+                    structure.addTweet(tuple.getString(2), tuple.getDouble(1), tuple.getBoolean(4));
                     map.put(regionID, structure);      
                     LOG.info("Created new structure with regionID: "+regionID);
                 }
