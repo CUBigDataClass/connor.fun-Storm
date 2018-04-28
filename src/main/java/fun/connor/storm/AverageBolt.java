@@ -54,13 +54,8 @@ class RegionData implements Serializable {
     
     public Double getAvgSent(){
         Double sent = this.sumSentiment/this.counter;
-        if (sent > 1){
-            sent = 1.;
-        }
-        if (sent < -1){
-            sent = -1.;
-        }
-        return sent;
+        Double sigm = 1/(1+Math.exp(-sent));
+        return sigm;
     }
 
     // Return arraylist of tweetIDs with sensitivity close to average
@@ -99,8 +94,7 @@ class RegionData implements Serializable {
         ArrayList<String> avgTweetIDs = this.getAvgTweets(numTweets);
         // For now: Keep emitting one value
         if (avgTweetIDs.size() > 0){
-            String avgTweetID = avgTweetIDs.get(0);
-            collector.emit(new Values(this.regionID, avgSentiment, avgTweetID, this.regionJSON));   
+            collector.emit(new Values(this.regionID, avgSentiment, avgTweetIDs, this.regionJSON, this.counter));   
         }
         else{
             this.LOG.info("ERROR: No unsensitive tweets found! Tweet IDS: "+this.tweetIDList + 
@@ -156,7 +150,7 @@ public class AverageBolt extends BaseWindowedBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("regionID", "avgSentiment", "exemplarTweetID", "regionJSON"));
+        declarer.declare(new Fields("regionID", "avgSentiment", "exemplarTweetID", "regionJSON","tweetCount"));
     }
 
 }

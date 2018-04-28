@@ -74,7 +74,7 @@ public class BothTopology {
         .fieldsGrouping("sentiment_bolt", new Fields("regionID")).setMemoryLoad(798.0);
     rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 2)
         .shuffleGrouping("average_bolt")
-        .setMemoryLoad(768.0);
+        .setMemoryLoad(800.0);
 
     Config rawConf = new Config();
     rawConf.setFallBackOnJavaSerialization(true);
@@ -89,7 +89,7 @@ public class BothTopology {
     // rawConf.put("topology.producer.batch.size", 262144);
     // rawConf.put("topology.transfer.buffer.size", 262144);
     // rawConf.put("topology.executor.receive.buffer.size", 262144);
-    // rawConf.put("topology.worker.max.heap.size.mb", 2000);
+    rawConf.put("topology.worker.max.heap.size.mb", 1000.);
     // rawConf.put("topology.sleep.spout.wait.strategy.time.ms", 0);
 
     try {
