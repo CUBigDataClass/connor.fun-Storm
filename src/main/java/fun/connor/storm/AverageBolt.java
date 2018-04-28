@@ -54,7 +54,7 @@ class RegionData implements Serializable {
     
     public Double getAvgSent(){
         Double sent = this.sumSentiment/this.counter;
-        Double sigm = 1/(1+Math.exp(-sent));
+        Double sigm = 2*(1/(1+Math.exp(-sent))) - 1; // Mulitiply by 2, sub 1 to center on 0
         return sigm;
     }
 
