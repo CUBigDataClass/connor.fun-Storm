@@ -18,6 +18,8 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Properties;
+import java.util.ArrayList;
+
 
 public class WeatherBolt extends BaseBasicBolt {
     private static final long serialVersionUID = 177717644989633253L;
@@ -55,7 +57,9 @@ public class WeatherBolt extends BaseBasicBolt {
 
         String regionID = (String) input.getValue(0);
         Double avgSentiment = (Double) input.getValue(1);
-        String tweetID = (String) input.getValue(2);
+        ArrayList<String> tweetIDs = (ArrayList<String>)input.getValue(2);
+
+        int tweetCount = (int) input.getValue(4);
 
         try {
             InputStream is = new URL(url).openStream();
@@ -66,7 +70,7 @@ public class WeatherBolt extends BaseBasicBolt {
                 //LOG.info("WeatherBolt got region: regionID=" + regionID + " with average sentiment of " + avgSentiment + " and weather of " + weatherJSON);
 
                 // doesn't block! tnx kpl, hope this works
-                this.kafkaProducer.send(new ProducerRecord<String, String>("test", regionID, this.formatOutput(regionID, avgSentiment, tweetID, regionJSON, weatherJSON)));
+                this.kafkaProducer.send(new ProducerRecord<String, String>("test", regionID, this.formatOutput(regionID, avgSentiment, tweetIDs, regionJSON, weatherJSON, tweetCount)));
 
                 // Output fields
                 //collector.emit(output);
@@ -78,7 +82,7 @@ public class WeatherBolt extends BaseBasicBolt {
         }
     }
 
-    private String formatOutput(String regionID, Double avgSentiment, String tweetID, JSONObject regionJSON, String weatherJSON) {
+    private String formatOutput(String regionID, Double avgSentiment, ArrayList<String> tweetID, JSONObject regionJSON, String weatherJSON, int tweetCount) {
         // Parse regionJSON and weatherJSON so they become sub-objects
         Object weatherRaw = null;
         JSONParser parser = new JSONParser();
@@ -96,6 +100,7 @@ public class WeatherBolt extends BaseBasicBolt {
         jsonObject.put("tid", tweetID);
         jsonObject.put("region", region);
         jsonObject.put("weather", weather);
+        jsonObject.put("count", tweetCount);
 
         return jsonObject.toJSONString();
     }

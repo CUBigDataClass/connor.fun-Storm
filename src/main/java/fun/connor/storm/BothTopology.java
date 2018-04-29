@@ -60,9 +60,9 @@ public class BothTopology {
     spoutConfig.startOffsetTime = OffsetRequest.LatestTime();
     rawBuilder.setSpout("raw_spout2", new KafkaSpout(spoutConfig));
 
-    rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 3)
+    rawBuilder.setBolt("sorting_bolt", new SortBolt(webserverEndpoint), 2)
         .shuffleGrouping("raw_spout1").shuffleGrouping("raw_spout2");
-    rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 40)
+    rawBuilder.setBolt("sentiment_bolt", new SentimentBolt(), 16)
         .shuffleGrouping("sorting_bolt");
 
     rawBuilder
@@ -70,9 +70,9 @@ public class BothTopology {
             "average_bolt",
             new AverageBolt().withWindow(BaseWindowedBolt.Duration.minutes(10),
                                          BaseWindowedBolt.Duration.minutes(2)),
-            10)
+            5)
         .fieldsGrouping("sentiment_bolt", new Fields("regionID")).setMemoryLoad(798.0);
-    rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 2)
+    rawBuilder.setBolt("weather_bolt", new WeatherBolt(), 1)
         .shuffleGrouping("average_bolt")
         .setMemoryLoad(768.0);
 
@@ -89,7 +89,7 @@ public class BothTopology {
     // rawConf.put("topology.producer.batch.size", 262144);
     // rawConf.put("topology.transfer.buffer.size", 262144);
     // rawConf.put("topology.executor.receive.buffer.size", 262144);
-    // rawConf.put("topology.worker.max.heap.size.mb", 2000);
+    rawConf.put("topology.worker.max.heap.size.mb", 1000.);
     // rawConf.put("topology.sleep.spout.wait.strategy.time.ms", 0);
 
     try {
